@@ -60,6 +60,62 @@ class SettingsOverridesTest < Minitest::Test
   end
 end
 
+class LinkEntriesTest < Minitest::Test
+  def setup
+    @dir = Dir.mktmpdir
+    @source = File.join(@dir, "source")
+    @target = File.join(@dir, "target")
+    FileUtils.mkdir_p(@source)
+    File.write(File.join(@source, "a.sh"), "a")
+    File.write(File.join(@source, "b.rb"), "b")
+  end
+
+  def teardown
+    FileUtils.remove_entry(@dir)
+  end
+
+  def link
+    out = StringIO.new
+    Dotagents.link_entries(@source, @target, out: out)
+    out.string.lines(chomp: true)
+  end
+
+  def test_creates_target_dir_and_links_every_source_file
+    output = link
+    %w[a.sh b.rb].each do |name|
+      assert_equal File.join(@source, name), File.readlink(File.join(@target, name))
+    end
+    assert_equal ["link  #{@target}/a.sh -> #{@source}/a.sh", "link  #{@target}/b.rb -> #{@source}/b.rb"], output
+  end
+
+  def test_is_idempotent_and_reports_existing_links_as_ok
+    link
+    assert_equal ["ok    #{@target}/a.sh", "ok    #{@target}/b.rb"], link
+  end
+
+  def test_replaces_symlink_pointing_elsewhere
+    FileUtils.mkdir_p(@target)
+    File.symlink(File.join(@dir, "stale"), File.join(@target, "a.sh"))
+    link
+    assert_equal File.join(@source, "a.sh"), File.readlink(File.join(@target, "a.sh"))
+  end
+
+  def test_leaves_unrelated_files_in_target_alone
+    FileUtils.mkdir_p(@target)
+    File.write(File.join(@target, "private.rb"), "mine")
+    link
+    assert_equal "mine", File.read(File.join(@target, "private.rb"))
+  end
+
+  def test_refuses_to_overwrite_a_real_file
+    FileUtils.mkdir_p(@target)
+    File.write(File.join(@target, "a.sh"), "real")
+    error = assert_raises(RuntimeError) { link }
+    assert_match(/not a symlink/, error.message)
+    assert_equal "real", File.read(File.join(@target, "a.sh"))
+  end
+end
+
 class AuditTest < Minitest::Test
   def setup
     @dir = Dir.mktmpdir
@@ -86,17 +142,14 @@ class AuditTest < Minitest::Test
   end
 
   def test_flags_absolute_home_paths_and_emails
-    file = write("b.sh", "cd /Users/someone/x\nmail someone@example.com\n") # audit:allow
+    home = File.join("/Users", "someone", "x")
+    email = %w[someone example.com].join("@")
+    file = write("b.sh", "cd #{home}\nmail #{email}\n")
     assert_equal ["absolute home path", "email address"], audit(file).findings.map(&:label)
   end
 
   def test_ssh_urls_are_not_emails
     file = write("r.md", "git clone git@github.com:someone/repo.git\nscp x user@host:/tmp\n")
-    assert_empty audit(file).findings
-  end
-
-  def test_allow_marker_skips_a_line
-    file = write("t.rb", "flag /Users/someone here # audit:allow\n")
     assert_empty audit(file).findings
   end
 

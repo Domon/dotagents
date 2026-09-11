@@ -89,8 +89,6 @@ module Dotagents
       "email address" => %r{[\w.+-]+@[\w-]+\.[\w.-]+\w(?![\w.-]*[:/])}
     }.freeze
 
-    ALLOW_MARKER = "audit:allow"
-
     Finding = Struct.new(:file, :line, :label)
 
     def initialize(root:, terms_path: File.join(root, ".audit-terms"), files: nil)
@@ -132,8 +130,6 @@ module Dotagents
       return [] unless File.file?(path) && text?(path)
 
       File.foreach(path, chomp: true).with_index(1).flat_map do |line, number|
-        next [] if line.include?(ALLOW_MARKER)
-
         labels_for(line).map { |label| Finding.new(file, number, label) }
       end
     end

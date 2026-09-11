@@ -25,7 +25,7 @@ model_name=$(printf '%s' "$model_name" | sed -E 's/ *\(([0-9]+[KM])[^)]*\)/ \1/'
 effort=$(printf '%s' "$input" | jq -r '.effort.level // empty')
 current_dir=$(printf '%s' "$input" | jq -r '.workspace.current_dir' | sed "s|^$HOME|~|")
 session_id=$(printf '%s' "$input" | jq -r '.session_id // "no-session"')
-cost=$(printf '%s' "$input" | jq -r '.cost.total_cost_usd')
+cost=$(printf '%s' "$input" | jq -r '.cost.total_cost_usd // 0')
 cost_str=$(printf '%.2f' "$cost" 2>/dev/null)
 
 # Context-window usage as a percent of the limit (used_percentage, 0-100; falls

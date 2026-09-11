@@ -36,9 +36,9 @@ end
 def display_model(id)
   return nil if id.nil?
 
-  base = id.sub(/\Aclaude-/, "").sub(/-\d{8}\z/, "")
+  base = id.sub(/\Aclaude-/, "")
   long_context = base.delete_suffix!("[1m]")
-  family, *version = base.split("-")
+  family, *version = base.sub(/-\d{8}\z/, "").split("-")
   return id unless family&.match?(/\A[a-z]+\z/) && version.all? { |part| part.match?(/\A\d+\z/) }
 
   [family.capitalize, version.join("."), long_context && "1M"].compact.join(" ")
@@ -97,6 +97,8 @@ def status_cell(task, now_millis)
 
   segments.join(" · ")
 end
+
+return unless __FILE__ == $PROGRAM_NAME
 
 input = JSON.parse($stdin.read)
 columns = input["columns"].to_i

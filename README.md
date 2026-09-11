@@ -18,7 +18,7 @@ Requires Ruby and `jq`.
 ```sh
 git clone git@github.com:Domon/dotagents.git ~/.dotagents
 cd ~/.dotagents
-cp .audit-terms.example .audit-terms   # then edit
+cp .audit-terms.example .audit-terms   # replace the example terms with your own
 rake install
 ```
 
@@ -53,7 +53,8 @@ scripts and add to `~/.claude/settings.json`:
 `rake audit` fails when any file contains a term from `.audit-terms`, an
 absolute `/Users/...` path, or an email address. `.audit-terms` is gitignored
 so the list itself is never published; `.audit-terms.example` shows the
-format.
+format. A list with no terms, comments only, is valid: the path and email
+checks run regardless.
 
 ## Development
 

@@ -19,8 +19,7 @@ such as `~/.claude`. For each file:
 2. Run `rake link` so the old path becomes a symlink to the new location.
 3. Delete any leftover copy elsewhere so exactly one copy exists.
 4. Scrub comments, example paths, test fixtures, and URLs before staging.
-5. Run `rake audit` and read every finding. `audit:allow` on a line is for
-   test fixtures that deliberately contain a flagged pattern, nothing else.
+5. Run `rake audit` and read every finding.
 
 Never add a real term to `.audit-terms.example`. Real terms go in the
 gitignored `.audit-terms`.
