@@ -1,0 +1,5 @@
+# One term per line, matched case-insensitively against every line of every file. Copy to .audit-terms (gitignored).
+# List employer names, internal hostnames, ticket prefixes, workspace IDs, and anything else that must never be committed.
+Acme Corp
+PROJ-
+acme.internal
