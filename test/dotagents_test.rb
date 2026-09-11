@@ -199,7 +199,7 @@ end
 class AuditTest < Minitest::Test
   def setup
     @dir = Dir.mktmpdir
-    File.write(File.join(@dir, ".audit-terms"), "# comment\nAcme Corp\n\nPROJ-\n")
+    File.write(File.join(@dir, ".audit-terms"), "# comment\nPied Piper\n\nPROJ-\n")
   end
 
   def teardown
@@ -221,15 +221,15 @@ class AuditTest < Minitest::Test
       Dir.mkdir(root)
       system("git", "-C", root, "init", "-q", exception: true)
       File.write(File.join(root, ".gitignore"), ".audit-terms\n")
-      File.write(File.join(root, ".audit-terms"), "Acme Corp\n")
+      File.write(File.join(root, ".audit-terms"), "Pied Piper\n")
       yield root
     end
   end
 
   def test_flags_terms_case_insensitively_with_line_numbers
-    file = write("a.md", "fine\nsee acme corp ticket PROJ-12\n")
+    file = write("a.md", "fine\nsee pied piper ticket PROJ-12\n")
     labels = audit(file).findings.map { |f| [f.line, f.label] }
-    assert_equal [[2, 'term "Acme Corp"'], [2, 'term "PROJ-"']], labels
+    assert_equal [[2, 'term "Pied Piper"'], [2, 'term "PROJ-"']], labels
   end
 
   def test_flags_absolute_home_paths_and_emails
@@ -246,7 +246,7 @@ class AuditTest < Minitest::Test
 
   def test_clean_file_passes_and_binary_is_skipped
     clean = write("c.txt", "nothing here\n")
-    binary = write("d.bin", "acme corp\0\xFF".b)
+    binary = write("d.bin", "pied piper\0\xFF".b)
     assert audit(clean, binary).run(out: StringIO.new)
   end
 
@@ -259,14 +259,14 @@ class AuditTest < Minitest::Test
 
   def test_lists_files_from_git_when_root_has_spaces
     in_git_repo("has space") do |root|
-      File.write(File.join(root, "a.md"), "acme corp\n")
+      File.write(File.join(root, "a.md"), "pied piper\n")
       assert_equal ["a.md"], Dotagents::Audit.new(root: root).findings.map(&:file)
     end
   end
 
   def test_staged_mode_scans_staged_content_not_the_working_tree
     in_git_repo do |root|
-      File.write(File.join(root, "a.md"), "acme corp\n")
+      File.write(File.join(root, "a.md"), "pied piper\n")
       system("git", "-C", root, "add", "a.md", exception: true)
       File.write(File.join(root, "a.md"), "fine\n")
       assert_equal ["a.md"], Dotagents::Audit.new(root: root, staged: true).findings.map(&:file)
@@ -276,7 +276,7 @@ class AuditTest < Minitest::Test
 
   def test_staged_mode_ignores_files_that_are_not_staged
     in_git_repo do |root|
-      File.write(File.join(root, "b.md"), "acme corp\n")
+      File.write(File.join(root, "b.md"), "pied piper\n")
       assert_empty Dotagents::Audit.new(root: root, staged: true).findings
       assert_equal ["b.md"], Dotagents::Audit.new(root: root).findings.map(&:file)
     end
@@ -288,7 +288,7 @@ class AuditTest < Minitest::Test
       system("git", "-C", root, "add", "old.md", exception: true)
       system("git", "-C", root, "-c", "user.name=t", "-c", "user.email=#{%w[t example.com].join("@")}", "commit", "-q", "-m", "base", exception: true)
       system("git", "-C", root, "mv", "old.md", "new.md", exception: true)
-      File.write(File.join(root, "new.md"), "fine\n" * 20 + "acme corp\n")
+      File.write(File.join(root, "new.md"), "fine\n" * 20 + "pied piper\n")
       system("git", "-C", root, "add", "new.md", exception: true)
       assert_equal ["new.md"], Dotagents::Audit.new(root: root, staged: true).findings.map(&:file)
     end

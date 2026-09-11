@@ -7,11 +7,11 @@
 # The cwd is shrunk ONLY as much as the terminal width requires. Parent segments
 # are abbreviated to their first character (dotfiles keep dot+char), left to
 # right, one at a time, until the whole line fits in $COLUMNS:
-#   ~/Projects/acme/webapp/.worktrees/feature-search
-#   ~/P/acme/webapp/.worktrees/feature-search
-#   ~/P/a/webapp/.worktrees/feature-search
-#   ~/P/a/w/.worktrees/feature-search
-#   ~/P/a/w/.w/feature-search
+#   ~/Projects/pied-piper/middle-out/.worktrees/feature-search
+#   ~/P/pied-piper/middle-out/.worktrees/feature-search
+#   ~/P/p/middle-out/.worktrees/feature-search
+#   ~/P/p/m/.worktrees/feature-search
+#   ~/P/p/m/.w/feature-search
 #   .../feature-search
 # The last segment is always kept whole. If $COLUMNS is unavailable, the path
 # falls back to the fully-abbreviated form. Field order + full session id kept.
