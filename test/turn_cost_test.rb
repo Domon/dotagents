@@ -116,7 +116,9 @@ class TurnCostTest < Minitest::Test
       assert status.success?
       assert_equal EXPECTED_MESSAGE, JSON.parse(out).fetch("systemMessage")
 
-      record = JSON.parse(File.read(File.join(home, ".claude/logs/turn-costs.jsonl")))
+      log_path = File.join(home, ".claude/logs/turn-costs.jsonl")
+      assert_equal 0o600, File.stat(log_path).mode & 0o777
+      record = JSON.parse(File.read(log_path))
       record.delete("ts")
       assert_equal(
         { "session_id" => "test-session", "turn" => 1, "cost" => 0.0865,

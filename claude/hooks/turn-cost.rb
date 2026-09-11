@@ -193,7 +193,7 @@ module TurnCost
 
   def append_log(record)
     FileUtils.mkdir_p(File.dirname(log_path))
-    File.open(log_path, "a") { |f| f.puts(JSON.generate(record)) }
+    File.open(log_path, "a", 0o600) { |f| f.puts(JSON.generate(record)) }
   end
 
   def utc_now

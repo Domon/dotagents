@@ -2,6 +2,7 @@
 
 require "json"
 require "fileutils"
+require "open3"
 
 module Dotagents
   def self.deep_merge(base, overrides)
@@ -104,15 +105,19 @@ module Dotagents
       out.print diff
       return false if changes.empty?
 
-      backup if File.exist?(@live_path)
-      write_atomically(@live_path, JSON.pretty_generate(merged) + "\n")
+      backup if live_exists?
+      write_atomically(JSON.pretty_generate(merged) + "\n")
       true
     end
 
     private
 
+    def live_exists?
+      File.exist?(@live_path)
+    end
+
     def live
-      @live ||= File.exist?(@live_path) ? JSON.parse(File.read(@live_path)) : {}
+      @live ||= live_exists? ? JSON.parse(File.read(@live_path)) : {}
     end
 
     def overrides
@@ -133,10 +138,14 @@ module Dotagents
       FileUtils.cp(@live_path, File.join(@backup_dir, "#{File.basename(@live_path)}.#{stamp}"))
     end
 
-    def write_atomically(path, content)
-      tmp = "#{path}.tmp"
-      File.write(tmp, content)
-      File.rename(tmp, path)
+    def write_atomically(content)
+      tmp = "#{@live_path}.tmp"
+      File.write(tmp, content, perm: live_mode)
+      File.rename(tmp, @live_path)
+    end
+
+    def live_mode
+      live_exists? ? File.stat(@live_path).mode & 0o777 : 0o666
     end
   end
 
@@ -147,6 +156,7 @@ module Dotagents
     }.freeze
 
     Finding = Struct.new(:file, :line, :label)
+    GitError = Class.new(StandardError)
 
     def initialize(root:, terms_path: File.join(root, ".audit-terms"), files: nil)
       @root = root
@@ -168,6 +178,9 @@ module Dotagents
       results.each { |f| out.puts "#{f.file}:#{f.line}: #{f.label}" }
       out.puts(results.empty? ? "audit: clean (#{files.size} files)" : "audit: #{results.size} finding(s)")
       results.empty?
+    rescue GitError => e
+      out.puts "audit: #{e.message}"
+      false
     end
 
     private
@@ -179,7 +192,14 @@ module Dotagents
     end
 
     def files
-      @files ||= `git -C #{@root} ls-files -z --cached --others --exclude-standard`.split("\0")
+      @files ||= git_files
+    end
+
+    def git_files
+      list, error, status = Open3.capture3("git", "-C", @root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
+      raise GitError, "git ls-files failed in #{@root}: #{error.strip}" unless status.success?
+
+      list.split("\0")
     end
 
     def scan(file)

@@ -119,6 +119,12 @@ class SettingsOverridesTest < Minitest::Test
   def test_diff_lists_changed_leaves_by_path
     assert_equal "statusLine.command\n  before: \"old\"\n  after:  \"new\"\n", subject.diff
   end
+
+  def test_apply_preserves_permissions_of_live_file
+    File.chmod(0o600, @live)
+    subject.apply(out: StringIO.new)
+    assert_equal 0o600, File.stat(@live).mode & 0o777
+  end
 end
 
 class LeafChangesTest < Minitest::Test
@@ -238,5 +244,23 @@ class AuditTest < Minitest::Test
     out = StringIO.new
     refute audit.run(out: out)
     assert_includes out.string, "missing"
+  end
+
+  def test_lists_files_from_git_when_root_has_spaces
+    Dir.mktmpdir do |base|
+      root = File.join(base, "has space")
+      Dir.mkdir(root)
+      system("git", "-C", root, "init", "-q", exception: true)
+      File.write(File.join(root, ".gitignore"), ".audit-terms\n")
+      File.write(File.join(root, ".audit-terms"), "Acme Corp\n")
+      File.write(File.join(root, "a.md"), "acme corp\n")
+      assert_equal ["a.md"], Dotagents::Audit.new(root: root).findings.map(&:file)
+    end
+  end
+
+  def test_run_fails_when_root_is_not_a_git_repository
+    out = StringIO.new
+    refute Dotagents::Audit.new(root: @dir).run(out: out)
+    assert_includes out.string, "git ls-files failed"
   end
 end
