@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "rake/testtask"
 require_relative "lib/dotagents"
 
 CLAUDE_HOME = File.expand_path("~/.claude")
@@ -44,7 +45,4 @@ task :audit do
   exit 1 unless Dotagents::Audit.new(root: __dir__).run
 end
 
-desc "Run the test suite"
-task :test do
-  ruby "-Ilib", *Dir["test/*_test.rb"].map { |f| ["-r", File.expand_path(f)] }.flatten, "-e", ""
-end
+Rake::TestTask.new(:test) { |t| t.pattern = "test/*_test.rb" }
