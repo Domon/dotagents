@@ -9,6 +9,7 @@ skills/                    tool-neutral SKILL.md directories (coming)
 claude/
   settings.overrides.json  keys merged into ~/.claude/settings.json
   scripts/                 status line scripts, linked into ~/.claude/scripts
+  hooks/                   Claude Code hooks, linked into ~/.claude/hooks
 ```
 
 ## Install
@@ -24,12 +25,15 @@ rake install
 
 `rake install` does three things, each also available on its own:
 
-- `rake link` symlinks every file in `claude/scripts` into `~/.claude/scripts`.
-  Existing symlinks are replaced; a real file in the way stops the task.
+- `rake link` symlinks every file in `claude/scripts` and `claude/hooks` into
+  the same directory under `~/.claude`. Existing symlinks are replaced; a real
+  file in the way stops the task; files you keep there yourself are untouched.
 - `rake settings:overrides` deep-merges `claude/settings.overrides.json` into
   `~/.claude/settings.json`. Keys in the overrides file win; every other key
-  in your settings is left alone. The previous file is copied to
-  `~/.claude/backups/` first. `rake settings:diff` shows the change without
+  in your settings is left alone. Under `hooks`, entries are matched by
+  command (a leading `/Users/<name>` counts as `~`) and replaced in place, so
+  your own hooks in the same event keep running. The previous file is copied
+  to `~/.claude/backups/` first. `rake settings:diff` shows the change without
   writing.
 - `rake githooks` sets `core.hooksPath` so `rake audit` runs before each commit.
 
@@ -47,6 +51,13 @@ scripts and add to `~/.claude/settings.json`:
   "subagentStatusLine": { "type": "command", "command": "~/.claude/scripts/subagent-statusline.rb" }
 }
 ```
+
+## Turn cost
+
+`claude/hooks/turn-cost.rb` is a Stop hook that prices the turn just finished
+from the session transcript, shows one line in Claude Code, and appends the
+detail to `~/.claude/logs/turn-costs.jsonl`. Prices live in a table at the top
+of the script; update them when models or prices change.
 
 ## Audit
 

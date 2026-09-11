@@ -13,12 +13,15 @@ class DisplayModelTest < Minitest::Test
     "claude-opus-5[1m]" => "Opus 5 1M",
     "claude-haiku-4-5-20251001" => "Haiku 4.5",
     "claude-haiku-4-5-20251001[1m]" => "Haiku 4.5 1M",
-    "gpt-6-astra" => "gpt-6-astra",
-    nil => nil
+    "gpt-6-astra" => "gpt-6-astra"
   }.freeze
 
   def test_table
-    CASES.each { |id, expected| assert_equal expected, display_model(id), id.inspect }
+    CASES.each { |id, expected| assert_equal expected, display_model(id), id }
+  end
+
+  def test_nil_passes_through
+    assert_nil display_model(nil)
   end
 end
 

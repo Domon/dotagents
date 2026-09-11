@@ -7,12 +7,16 @@ CLAUDE_HOME = File.expand_path("~/.claude")
 
 task default: :install
 
-desc "Link scripts into ~/.claude, apply settings overrides, enable git hooks"
+desc "Link scripts and hooks into ~/.claude, apply settings overrides, enable git hooks"
 task install: %w[link settings:overrides githooks]
 
-desc "Symlink each file in claude/scripts into ~/.claude/scripts"
+LINKED_DIRS = %w[scripts hooks].freeze
+
+desc "Symlink each file in claude/{#{LINKED_DIRS.join(',')}} into the same directory under ~/.claude"
 task :link do
-  Dotagents.link_entries(File.join(__dir__, "claude", "scripts"), File.join(CLAUDE_HOME, "scripts"))
+  LINKED_DIRS.each do |dir|
+    Dotagents.link_entries(File.join(__dir__, "claude", dir), File.join(CLAUDE_HOME, dir))
+  end
 end
 
 desc "Point core.hooksPath at .githooks so rake audit runs before every commit"

@@ -6,5 +6,19 @@
   "subagentStatusLine": {
     "type": "command",
     "command": "~/.claude/scripts/subagent-statusline.rb"
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/turn-cost.rb",
+            "timeout": 15,
+            "statusMessage": "computing turn cost"
+          }
+        ]
+      }
+    ]
   }
 }
