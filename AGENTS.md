@@ -6,9 +6,14 @@ Rules for agents working in this repository.
 
 Reusable configuration for AI coding agents, published under a personal
 GitHub account. The repository is public. Nothing employer-specific may
-appear in it: no company or product names, internal hostnames, ticket
-prefixes, Slack workspace IDs, absolute `/Users/...` paths, or email
-addresses. If a value is needed only on one machine, it does not belong here.
+appear in file contents: no company or product names, internal hostnames,
+ticket prefixes, Slack workspace IDs, identifiers copied from a private
+codebase, absolute `/Users/...` paths, or email addresses. If a value is
+needed only on one machine, it does not belong here.
+
+Commit metadata is out of scope. The author's name and email, the signing
+key, and Co-Authored-By trailers are public attribution the owner has chosen.
+Do not flag them.
 
 ## Moving files in
 
@@ -19,6 +24,9 @@ such as `~/.claude`. For each file:
 2. Run `rake link` so the old path becomes a symlink to the new location.
 3. Delete any leftover copy elsewhere so exactly one copy exists.
 4. Scrub comments, example paths, test fixtures, and URLs before staging.
+   Example identifiers in messages, comments and fixtures are invented, never
+   lifted from a real codebase; the fictional names are Pied Piper for the
+   organisation and middle-out for the application.
 5. Run `rake audit` and read every finding.
 
 Never add a real term to `.audit-terms.example`. Real terms go in the
@@ -48,15 +56,25 @@ unmatched is appended. Other list-valued keys stay out of the overrides file.
 
 ## Code
 
-Ruby. Behaviour lives in `lib/dotagents.rb` with tests in `test/`, run by
-`rake test`. New behaviour arrives with a test. No comments unless the code
-cannot say it.
+Ruby for new code. Behaviour lives in `lib/dotagents.rb` with tests in
+`test/`, run by `rake test`. A hook keeps the language it arrived in, and its
+tests sit in `test/` in that language. New behaviour arrives with a test. No
+comments unless the code cannot say it.
 
 ## Git
 
 Commits are signed. `.githooks/pre-commit` runs `rake audit`; never bypass it
 with `--no-verify`. Do not push. The owner reviews every commit before it
 leaves the machine.
+
+## Reviewing
+
+These are deliberate and are not findings:
+
+- The Pied Piper and middle-out names, and paths built from them.
+- The four banned words appearing in `claude/hooks/ban-words.py`, its tests,
+  and the README section about it. They are the rule's own subject.
+- Hook logs and state files under `~/.claude`.
 
 ## Documentation
 

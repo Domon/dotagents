@@ -14,7 +14,7 @@ claude/
 
 ## Install
 
-Requires Ruby and `jq`.
+Requires Ruby, `jq`, and `python3` for the ban-words hook.
 
 ```sh
 git clone git@github.com:Domon/dotagents.git ~/.dotagents
@@ -58,6 +58,17 @@ scripts and add to `~/.claude/settings.json`:
 from the session transcript, shows one line in Claude Code, and appends the
 detail to `~/.claude/logs/turn-costs.jsonl`. Prices live in a table at the top
 of the script; update them when models or prices change.
+
+## Banned words
+
+`claude/hooks/ban-words.py` is a PreToolUse hook that blocks newly written
+text using four filler terms: "surface" and "affordance" as nouns,
+"load-bearing", and "clamp" in any form. It scans Write and Edit content, and
+text that `git commit`, `gh pr` and `gh api` publish commands carry inline or
+as `-F body=@file`. Words already present in the file being edited are
+allowed, and the agent can keep a genuine verb or domain term by re-running
+the identical call once. Every block and override
+is logged to `~/.claude/ban-words.log`. Requires `python3`.
 
 ## Audit
 

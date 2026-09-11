@@ -8,6 +8,19 @@
     "command": "~/.claude/scripts/subagent-statusline.rb"
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/ban-words.py",
+            "timeout": 10,
+            "statusMessage": "checking banned words"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
