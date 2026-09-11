@@ -49,4 +49,11 @@ task :audit do
   exit 1 unless Dotagents::Audit.new(root: __dir__).run
 end
 
+namespace :audit do
+  desc "Run the audit against staged content only, as the pre-commit hook does"
+  task :staged do
+    exit 1 unless Dotagents::Audit.new(root: __dir__, staged: true).run
+  end
+end
+
 Rake::TestTask.new(:test) { |t| t.pattern = "test/*_test.rb" }

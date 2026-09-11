@@ -35,7 +35,7 @@ rake install
   your own hooks in the same event keep running. The previous file is copied
   to `~/.claude/backups/` first. `rake settings:diff` shows the change without
   writing.
-- `rake githooks` sets `core.hooksPath` so `rake audit` runs before each commit.
+- `rake githooks` sets `core.hooksPath` so `rake audit:staged` runs before each commit.
 
 ## Status line
 
@@ -66,6 +66,10 @@ absolute `/Users/...` path, or an email address. `.audit-terms` is gitignored
 so the list itself is never published; `.audit-terms.example` shows the
 format. A list with no terms, comments only, is valid: the path and email
 checks run regardless.
+
+`rake audit:staged` checks only the content staged for the next commit,
+which is what the pre-commit hook runs: a file edited after `git add` is
+judged by its staged copy, and untracked files are skipped.
 
 ## Development
 

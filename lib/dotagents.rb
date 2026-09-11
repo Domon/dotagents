@@ -158,10 +158,11 @@ module Dotagents
     Finding = Struct.new(:file, :line, :label)
     GitError = Class.new(StandardError)
 
-    def initialize(root:, terms_path: File.join(root, ".audit-terms"), files: nil)
+    def initialize(root:, terms_path: File.join(root, ".audit-terms"), files: nil, staged: false)
       @root = root
       @terms_path = terms_path
       @files = files
+      @staged = staged
     end
 
     def findings
@@ -192,21 +193,42 @@ module Dotagents
     end
 
     def files
-      @files ||= git_files
+      @files ||= @staged ? staged_files : working_tree_files
     end
 
-    def git_files
-      list, error, status = Open3.capture3("git", "-C", @root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
-      raise GitError, "git ls-files failed in #{@root}: #{error.strip}" unless status.success?
+    def working_tree_files
+      git("ls-files", "-z", "--cached", "--others", "--exclude-standard").split("\0")
+    end
 
-      list.split("\0")
+    def staged_files
+      git("diff", "--cached", "-z", "--name-only", "--diff-filter=d").split("\0")
+    end
+
+    def content(file)
+      @staged ? staged_content(file) : working_tree_content(file)
+    end
+
+    def staged_content(file)
+      git("show", ":#{file}")
+    end
+
+    def working_tree_content(file)
+      path = File.join(@root, file)
+      File.file?(path) ? File.read(path) : ""
+    end
+
+    def git(*args)
+      out, error, status = Open3.capture3("git", "-C", @root, *args)
+      raise GitError, "git #{args.first} failed in #{@root}: #{error.strip}" unless status.success?
+
+      out
     end
 
     def scan(file)
-      path = File.join(@root, file)
-      return [] unless File.file?(path) && text?(path)
+      body = content(file)
+      return [] if binary?(body)
 
-      File.foreach(path, chomp: true).with_index(1).flat_map do |line, number|
+      body.each_line(chomp: true).with_index(1).flat_map do |line, number|
         labels_for(line).map { |label| Finding.new(file, number, label) }
       end
     end
@@ -217,8 +239,8 @@ module Dotagents
       term_labels + pattern_labels
     end
 
-    def text?(path)
-      !File.binread(path, 8_000).to_s.include?("\0")
+    def binary?(body)
+      body.byteslice(0, 8_000).include?("\0")
     end
   end
 end

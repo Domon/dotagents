@@ -215,6 +215,17 @@ class AuditTest < Minitest::Test
     Dotagents::Audit.new(root: @dir, files: files)
   end
 
+  def in_git_repo(name = "repo")
+    Dir.mktmpdir do |base|
+      root = File.join(base, name)
+      Dir.mkdir(root)
+      system("git", "-C", root, "init", "-q", exception: true)
+      File.write(File.join(root, ".gitignore"), ".audit-terms\n")
+      File.write(File.join(root, ".audit-terms"), "Acme Corp\n")
+      yield root
+    end
+  end
+
   def test_flags_terms_case_insensitively_with_line_numbers
     file = write("a.md", "fine\nsee acme corp ticket PROJ-12\n")
     labels = audit(file).findings.map { |f| [f.line, f.label] }
@@ -247,14 +258,39 @@ class AuditTest < Minitest::Test
   end
 
   def test_lists_files_from_git_when_root_has_spaces
-    Dir.mktmpdir do |base|
-      root = File.join(base, "has space")
-      Dir.mkdir(root)
-      system("git", "-C", root, "init", "-q", exception: true)
-      File.write(File.join(root, ".gitignore"), ".audit-terms\n")
-      File.write(File.join(root, ".audit-terms"), "Acme Corp\n")
+    in_git_repo("has space") do |root|
       File.write(File.join(root, "a.md"), "acme corp\n")
       assert_equal ["a.md"], Dotagents::Audit.new(root: root).findings.map(&:file)
+    end
+  end
+
+  def test_staged_mode_scans_staged_content_not_the_working_tree
+    in_git_repo do |root|
+      File.write(File.join(root, "a.md"), "acme corp\n")
+      system("git", "-C", root, "add", "a.md", exception: true)
+      File.write(File.join(root, "a.md"), "fine\n")
+      assert_equal ["a.md"], Dotagents::Audit.new(root: root, staged: true).findings.map(&:file)
+      assert_empty Dotagents::Audit.new(root: root).findings
+    end
+  end
+
+  def test_staged_mode_ignores_files_that_are_not_staged
+    in_git_repo do |root|
+      File.write(File.join(root, "b.md"), "acme corp\n")
+      assert_empty Dotagents::Audit.new(root: root, staged: true).findings
+      assert_equal ["b.md"], Dotagents::Audit.new(root: root).findings.map(&:file)
+    end
+  end
+
+  def test_staged_mode_scans_a_renamed_and_edited_file_under_its_new_name
+    in_git_repo do |root|
+      File.write(File.join(root, "old.md"), "fine\n" * 20)
+      system("git", "-C", root, "add", "old.md", exception: true)
+      system("git", "-C", root, "-c", "user.name=t", "-c", "user.email=#{%w[t example.com].join("@")}", "commit", "-q", "-m", "base", exception: true)
+      system("git", "-C", root, "mv", "old.md", "new.md", exception: true)
+      File.write(File.join(root, "new.md"), "fine\n" * 20 + "acme corp\n")
+      system("git", "-C", root, "add", "new.md", exception: true)
+      assert_equal ["new.md"], Dotagents::Audit.new(root: root, staged: true).findings.map(&:file)
     end
   end
 
