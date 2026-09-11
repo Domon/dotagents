@@ -41,8 +41,10 @@ the machine through `rake settings:overrides`, which deep-merges them into
 `~/.claude/settings.json`. Edit shared keys here, never in the live file, or
 the next run overwrites the hand edit. Run `rake settings:diff` first.
 
-The merge replaces arrays instead of combining them. Keep `hooks` and other
-list-valued keys out of the overrides file until the merge unions them.
+Arrays are replaced, not combined, except under `hooks`: there a group is
+matched by its `matcher` and an entry by its `command`, with a leading
+`/Users/<name>` read as `~`, and a match is replaced in place while anything
+unmatched is appended. Other list-valued keys stay out of the overrides file.
 
 ## Code
 

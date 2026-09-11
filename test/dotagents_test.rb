@@ -20,6 +20,69 @@ class DeepMergeTest < Minitest::Test
   end
 end
 
+class MergeSettingsTest < Minitest::Test
+  HOME = File.join("/Users", "someone")
+
+  def live
+    {
+      "model" => "m",
+      "hooks" => {
+        "Stop" => [{ "hooks" => [
+          { "type" => "command", "command" => "agent-deck hook-handler" },
+          { "type" => "command", "command" => "#{HOME}/.claude/hooks/turn-cost.rb", "timeout" => 15 }
+        ] }]
+      }
+    }
+  end
+
+  def tilde_entry
+    { "type" => "command", "command" => "~/.claude/hooks/turn-cost.rb", "timeout" => 15, "statusMessage" => "cost" }
+  end
+
+  def merge(overrides)
+    Dotagents.merge_settings(live, overrides)
+  end
+
+  def test_tilde_command_replaces_absolute_one_in_place
+    merged = merge({ "hooks" => { "Stop" => [{ "hooks" => [tilde_entry] }] } })
+    assert_equal [live["hooks"]["Stop"][0]["hooks"][0], tilde_entry], merged["hooks"]["Stop"][0]["hooks"]
+  end
+
+  def test_unknown_command_is_appended
+    extra = { "type" => "command", "command" => "echo hi" }
+    merged = merge({ "hooks" => { "Stop" => [{ "hooks" => [extra] }] } })
+    assert_equal 3, merged["hooks"]["Stop"][0]["hooks"].size
+    assert_equal extra, merged["hooks"]["Stop"][0]["hooks"].last
+  end
+
+  def test_new_matcher_group_and_new_event_are_added
+    merged = merge({ "hooks" => {
+      "Stop" => [{ "matcher" => "x", "hooks" => [tilde_entry] }],
+      "SessionStart" => [{ "hooks" => [tilde_entry] }]
+    } })
+    assert_equal [nil, "x"], merged["hooks"]["Stop"].map { |group| group["matcher"] }
+    assert_equal [{ "hooks" => [tilde_entry] }], merged["hooks"]["SessionStart"]
+  end
+
+  def test_other_keys_still_deep_merge
+    merged = merge({ "model" => "n", "env" => { "A" => "1" } })
+    assert_equal "n", merged["model"]
+    assert_equal({ "A" => "1" }, merged["env"])
+    assert_equal live["hooks"], merged["hooks"]
+  end
+
+  def test_live_without_hooks_takes_override_hooks
+    overrides = { "hooks" => { "Stop" => [{ "hooks" => [tilde_entry] }] } }
+    assert_equal overrides["hooks"], Dotagents.merge_settings({ "model" => "m" }, overrides)["hooks"]
+  end
+
+  def test_idempotent
+    overrides = { "hooks" => { "Stop" => [{ "hooks" => [tilde_entry] }] } }
+    once = merge(overrides)
+    assert_equal once, Dotagents.merge_settings(once, overrides)
+  end
+end
+
 class SettingsOverridesTest < Minitest::Test
   def setup
     @dir = Dir.mktmpdir
@@ -53,10 +116,21 @@ class SettingsOverridesTest < Minitest::Test
     assert_equal 1, Dir.children(@backups).size
   end
 
-  def test_diff_lists_only_changed_top_level_keys
-    diff = subject.diff
-    assert_includes diff, "statusLine"
-    refute_includes diff, "model"
+  def test_diff_lists_changed_leaves_by_path
+    assert_equal "statusLine.command\n  before: \"old\"\n  after:  \"new\"\n", subject.diff
+  end
+end
+
+class LeafChangesTest < Minitest::Test
+  def test_recurses_into_hashes_and_same_length_arrays
+    before = { "hooks" => { "Stop" => [{ "hooks" => [{ "command" => "a" }, { "command" => "b" }] }] }, "model" => "m" }
+    after = { "hooks" => { "Stop" => [{ "hooks" => [{ "command" => "a" }, { "command" => "c" }] }] }, "model" => "m" }
+    assert_equal [["hooks.Stop[0].hooks[1].command", "b", "c"]], Dotagents.leaf_changes(before, after)
+  end
+
+  def test_arrays_of_different_length_and_new_keys_are_leaves
+    assert_equal [["list", [1], [1, 2]], ["added", nil, true]],
+                 Dotagents.leaf_changes({ "list" => [1] }, { "list" => [1, 2], "added" => true })
   end
 end
 

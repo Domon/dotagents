@@ -10,6 +10,63 @@ module Dotagents
     end
   end
 
+  def self.leaf_changes(before, after, path = nil)
+    if before.is_a?(Hash) && after.is_a?(Hash)
+      (before.keys | after.keys).flat_map { |key| leaf_changes(before[key], after[key], [path, key].compact.join(".")) }
+    elsif before.is_a?(Array) && after.is_a?(Array) && before.size == after.size
+      before.zip(after).each_with_index.flat_map { |(old, new), i| leaf_changes(old, new, "#{path}[#{i}]") }
+    elsif before == after
+      []
+    else
+      [[path, before, after]]
+    end
+  end
+
+  def self.merge_settings(live, overrides)
+    live.merge(overrides) do |key, old, new|
+      if key == "hooks"
+        Hooks.merge(old, new)
+      elsif old.is_a?(Hash) && new.is_a?(Hash)
+        deep_merge(old, new)
+      else
+        new
+      end
+    end
+  end
+
+  module Hooks
+    def self.merge(live, overrides)
+      live.merge(overrides) { |_event, old_groups, new_groups| merge_groups(old_groups, new_groups) }
+    end
+
+    def self.merge_groups(live_groups, override_groups)
+      override_groups.reduce(live_groups) do |groups, override|
+        index = groups.index { |group| group["matcher"] == override["matcher"] }
+        next groups + [override] unless index
+
+        entries = merge_entries(groups[index].fetch("hooks", []), override.fetch("hooks", []))
+        groups.dup.tap { |result| result[index] = groups[index].merge("hooks" => entries) }
+      end
+    end
+
+    def self.merge_entries(live_entries, override_entries)
+      override_entries.reduce(live_entries) do |entries, override|
+        index = entries.index { |entry| same_command?(entry["command"], override["command"]) }
+        next entries + [override] unless index
+
+        entries.dup.tap { |result| result[index] = override }
+      end
+    end
+
+    def self.same_command?(left, right)
+      home_agnostic(left) == home_agnostic(right)
+    end
+
+    def self.home_agnostic(command)
+      command.to_s.gsub(%r{/Users/[^/\s"']+}, "~")
+    end
+  end
+
   def self.link_entries(source_dir, target_dir, out: $stdout)
     FileUtils.mkdir_p(target_dir)
     Dir.children(source_dir).sort.each do |name|
@@ -38,8 +95,8 @@ module Dotagents
     def diff
       return "no changes\n" if changes.empty?
 
-      changes.map do |key, value|
-        "#{key}\n  before: #{live[key].to_json}\n  after:  #{value.to_json}\n"
+      Dotagents.leaf_changes(live, merged).map do |path, before, after|
+        "#{path}\n  before: #{before.to_json}\n  after:  #{after.to_json}\n"
       end.join
     end
 
@@ -63,7 +120,7 @@ module Dotagents
     end
 
     def merged
-      Dotagents.deep_merge(live, overrides)
+      Dotagents.merge_settings(live, overrides)
     end
 
     def changes
