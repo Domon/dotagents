@@ -215,11 +215,18 @@ class AuditTest < Minitest::Test
     Dotagents::Audit.new(root: @dir, files: files)
   end
 
+  def git(root, *args)
+    system("git", "-C", root, *args, exception: true)
+  end
+
   def in_git_repo(name = "repo")
     Dir.mktmpdir do |base|
       root = File.join(base, name)
       Dir.mkdir(root)
-      system("git", "-C", root, "init", "-q", exception: true)
+      git(root, "init", "-q")
+      git(root, "config", "user.name", "t")
+      git(root, "config", "user.email", %w[t example.com].join("@"))
+      git(root, "config", "commit.gpgsign", "false")
       File.write(File.join(root, ".gitignore"), ".audit-terms\n")
       File.write(File.join(root, ".audit-terms"), "Pied Piper\n")
       yield root
@@ -267,7 +274,7 @@ class AuditTest < Minitest::Test
   def test_staged_mode_scans_staged_content_not_the_working_tree
     in_git_repo do |root|
       File.write(File.join(root, "a.md"), "pied piper\n")
-      system("git", "-C", root, "add", "a.md", exception: true)
+      git(root, "add", "a.md")
       File.write(File.join(root, "a.md"), "fine\n")
       assert_equal ["a.md"], Dotagents::Audit.new(root: root, staged: true).findings.map(&:file)
       assert_empty Dotagents::Audit.new(root: root).findings
@@ -285,11 +292,11 @@ class AuditTest < Minitest::Test
   def test_staged_mode_scans_a_renamed_and_edited_file_under_its_new_name
     in_git_repo do |root|
       File.write(File.join(root, "old.md"), "fine\n" * 20)
-      system("git", "-C", root, "add", "old.md", exception: true)
-      system("git", "-C", root, "-c", "user.name=t", "-c", "user.email=#{%w[t example.com].join("@")}", "commit", "-q", "-m", "base", exception: true)
-      system("git", "-C", root, "mv", "old.md", "new.md", exception: true)
+      git(root, "add", "old.md")
+      git(root, "commit", "-q", "-m", "base")
+      git(root, "mv", "old.md", "new.md")
       File.write(File.join(root, "new.md"), "fine\n" * 20 + "pied piper\n")
-      system("git", "-C", root, "add", "new.md", exception: true)
+      git(root, "add", "new.md")
       assert_equal ["new.md"], Dotagents::Audit.new(root: root, staged: true).findings.map(&:file)
     end
   end
