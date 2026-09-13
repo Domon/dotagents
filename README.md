@@ -68,7 +68,8 @@ text that `git commit`, `gh pr` and `gh api` publish commands carry inline or
 as `-F body=@file`. Words already present in the file being edited are
 allowed, and the agent can keep a genuine verb or domain term by re-running
 the identical call once. Every block and override
-is logged to `~/.claude/ban-words.log`. Requires `python3`.
+is logged to `~/.claude/ban-words.log`, which the hook keeps readable by the
+owner only. Requires `python3`.
 
 ## Audit
 

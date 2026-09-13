@@ -192,6 +192,13 @@ def confirm_key(data, tool, tool_input):
     return hashlib.sha256(sig.encode("utf-8", "replace")).hexdigest()
 
 
+def private_open(path, mode):
+    flags = os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW | (os.O_APPEND if "a" in mode else os.O_TRUNC)
+    fd = os.open(path, flags, 0o600)
+    os.fchmod(fd, 0o600)
+    return os.fdopen(fd, mode, encoding="utf-8")
+
+
 def confirm_pending(key):
     """True if `key` was recorded recently (a deliberate re-submit -> allow),
     else record it and return False (first hit -> block). Any error returns
@@ -212,7 +219,7 @@ def confirm_pending(key):
             del pending[key]
         else:
             pending[key] = now
-        with open(PENDING_PATH, "w") as f:
+        with private_open(PENDING_PATH, "w") as f:
             json.dump(pending, f)
         return already
     except Exception:
@@ -257,7 +264,7 @@ def log_event(data, hits, action):
             "cwd": data.get("cwd"),
             "session": (data.get("session_id") or "")[:8],
         }
-        with open(LOG_PATH, "a", encoding="utf-8") as f:
+        with private_open(LOG_PATH, "a") as f:
             f.write(json.dumps(entry) + "\n")
     except Exception:
         pass
