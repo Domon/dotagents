@@ -19,6 +19,17 @@
             "statusMessage": "checking banned words"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/comment-lint.rb",
+            "timeout": 10,
+            "statusMessage": "checking comment discipline"
+          }
+        ]
       }
     ],
     "Stop": [

@@ -59,3 +59,32 @@ Logs: one JSON line per block or override in `~/.claude/ban-words.log`, and
 pending confirmations in `~/.claude/.ban-words-pending.json`, both kept
 owner-readable only. `BAN_WORDS_LOG` and `BAN_WORDS_PENDING` override the
 paths, which the tests use. Logging never affects the decision.
+
+## Comment lint
+
+`hooks/comment-lint.rb` is a PreToolUse hook that blocks newly written code
+whose comments drift from the default of writing none. Two shapes are
+refused: a run of more than two consecutive whole-line comments, and a
+comment written in the change/review register — "mirrors", "the fix",
+"previously", "note that", "this ensures", "regression guard" — words about
+the pull request rather than about the code, which stop making sense to
+anyone who never saw it. The same three mechanisms as the banned-words hook
+keep it out of the way:
+
+- Whole-line comments only. A trailing comment after code never joins a run,
+  so annotated data tables and end-of-line notes are untouched.
+- Baseline diff. Runs and register words already on disk never block again,
+  so editing a file that has walls does not fight the hook.
+- Confirm on re-run. For the rare caveat the code cannot express, re-running
+  the identical call once passes it through; both events are logged.
+
+Comment syntax is recognised per extension: `#` for Ruby, Python, shell and
+config formats, `//` and `/* */` for the C family, `--` for SQL, and CSS
+comments. Any other extension is ignored. Exempt: files beside the hook's
+real location, anything under `~/.claude/hooks`, and `*.stories.tsx`, where
+long descriptive blocks are the point.
+
+Logs: one JSON line per block or override in `~/.claude/comment-lint.log`,
+and pending confirmations in `~/.claude/.comment-lint-pending.json`, both
+kept owner-readable only. `COMMENT_LINT_LOG` and `COMMENT_LINT_PENDING`
+override the paths, which the tests use.

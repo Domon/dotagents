@@ -47,6 +47,7 @@ rake install
 | Claude Code | status line  | model, effort, cwd, session, cost and context on one line | [claude/README.md](claude/README.md#status-line)  |
 | Claude Code | turn cost    | Stop hook that prices each turn from the transcript       | [claude/README.md](claude/README.md#turn-cost)    |
 | Claude Code | banned words | PreToolUse hook that blocks vague filler nouns in new text | [claude/README.md](claude/README.md#banned-words) |
+| Claude Code | comment lint | PreToolUse hook that blocks comment walls and review-register comments | [claude/README.md](claude/README.md#comment-lint) |
 
 ## Development
 
