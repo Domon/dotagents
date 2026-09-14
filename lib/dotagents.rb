@@ -3,6 +3,7 @@
 require "json"
 require "fileutils"
 require "open3"
+require "time"
 
 module Dotagents
   def self.deep_merge(base, overrides)
@@ -257,6 +258,75 @@ module Dotagents
 
     def binary?(body)
       body.byteslice(0, 8_000).include?("\0")
+    end
+  end
+
+  class CodexReview
+    ZERO_SHA = /\A0+\z/
+
+    def self.for(dir)
+      out, _err, status = Open3.capture3("git", "-C", dir, "rev-parse", "--show-toplevel", "--absolute-git-dir")
+      return nil unless status.success?
+
+      root, git_dir = out.split("\n")
+      new(root: root, git_dir: git_dir)
+    end
+
+    def initialize(root:, git_dir:)
+      @root = root
+      @git_dir = git_dir
+    end
+
+    def record_dir
+      File.join(@git_dir, "codex-review")
+    end
+
+    def approved?(sha)
+      File.exist?(File.join(record_dir, sha))
+    end
+
+    def unapproved(shas)
+      shas.reject { |sha| approved?(sha) }
+    end
+
+    def pending
+      unapproved(unpushed)
+    end
+
+    def record!(sha, session:)
+      FileUtils.mkdir_p(record_dir)
+      record = { "sha" => sha, "subject" => subject(sha), "session" => session,
+                 "approved_at" => Time.now.utc.iso8601 }
+      File.write(File.join(record_dir, sha), JSON.generate(record) + "\n")
+      record
+    end
+
+    def unpushed
+      git("rev-list", "--reverse", "@{u}..HEAD").to_s.split
+    end
+
+    def pushed(local_sha, remote_sha, remote_name)
+      exclude = remote_sha.match?(ZERO_SHA) ? ["--not", "--remotes=#{remote_name}"] : ["^#{remote_sha}"]
+      git("rev-list", "--reverse", local_sha, *exclude).to_s.split
+    end
+
+    def subject(sha)
+      git("log", "-1", "--format=%s", sha).to_s.chomp
+    end
+
+    def bundle(shas)
+      shas.map do |sha|
+        message = git("log", "-1", "--format=%B", sha).to_s
+        patch = git("show", "--stat", "--patch", "--format=", sha).to_s
+        "# Commit #{sha}\n\n## Message\n\n```\n#{message}```\n\n## Patch\n\n```diff\n#{patch}```\n"
+      end.join("\n")
+    end
+
+    private
+
+    def git(*args)
+      out, _err, status = Open3.capture3("git", "-C", @root, *args)
+      status.success? ? out : nil
     end
   end
 end
