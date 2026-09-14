@@ -93,6 +93,28 @@ class BashArmTest(unittest.TestCase):
                "-F body=@/nonexistent/nowhere.md")
         self.assertFalse(self.blocked(cmd))
 
+    def test_git_commit_message_from_a_file_is_scanned(self):
+        path = self.write_temp(FLAGGED)
+        self.assertTrue(self.blocked(f"git commit -F {path}"))
+        self.assertTrue(self.blocked(f"git commit --file {path}"))
+
+    def test_gh_pr_body_file_is_scanned(self):
+        path = self.write_temp(FLAGGED)
+        self.assertTrue(self.blocked(f"gh pr create --title t --body-file {path}"))
+
+    def test_gh_api_input_file_is_scanned(self):
+        path = self.write_temp(f'{{"body": "{FLAGGED}"}}')
+        cmd = f"gh api repos/pied-piper/middle-out/pulls/4242 --method PATCH --input {path}"
+        self.assertTrue(self.blocked(cmd))
+
+    def test_gh_api_long_method_flag_counts_as_a_write(self):
+        cmd = f'gh api repos/pied-piper/middle-out/issues/4242/comments --method POST -f body="{FLAGGED}"'
+        self.assertTrue(self.blocked(cmd))
+
+    def test_clean_body_file_passes(self):
+        path = self.write_temp(CLEAN)
+        self.assertFalse(self.blocked(f"gh pr create --title t --body-file {path}"))
+
     # --- commands that must stay untouched ----------------------------------
 
     def test_reading_a_pr_body_is_not_scanned(self):

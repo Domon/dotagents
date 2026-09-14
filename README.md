@@ -65,7 +65,8 @@ of the script; update them when models or prices change.
 text using four filler terms: "surface" and "affordance" as nouns,
 "load-bearing", and "clamp" in any form. It scans Write and Edit content, and
 text that `git commit`, `gh pr` and `gh api` publish commands carry inline or
-as `-F body=@file`. Words already present in the file being edited are
+in a file named by `-F`, `--file`, `--body-file`, `--input` or `body=@file`.
+Words already present in the file being edited are
 allowed, and the agent can keep a genuine verb or domain term by re-running
 the identical call once. Every block and override
 is logged to `~/.claude/ban-words.log`, which the hook keeps readable by the

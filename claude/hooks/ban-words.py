@@ -31,7 +31,8 @@ API name, not prose, and is never matched; only the bare word in running text is
 Scanned:
   - Write            -> `content`, diffed against the file's current on-disk text
   - Edit / MultiEdit -> `new_string`(s), diffed against the file's on-disk text
-  - Bash             -> only `git commit ...` and `gh pr create|edit ...`
+  - Bash             -> `git commit`, `gh pr create|edit|comment|review` and
+                        `gh api` writes, inline or via -F/--file/--body-file/--input
 
 Exempt paths: anything beside the hook's real location, ~/.claude/hooks and
 settings.json, and agent-instruction files (CLAUDE.md / AGENTS.md / GEMINI.md)
@@ -85,12 +86,14 @@ GH_PR_WRITE = re.compile(r"\bgh\s+pr\s+(?:create|edit|comment|review)\b")
 # inline review comments, issue comments, and PATCHes of a PR body.
 GH_API_WRITE = re.compile(
     r"\bgh\s+api\b[^|;&]*?"
-    r"(?:/(?:comments|reviews)\b|-X\s*(?:POST|PATCH|PUT)\b)",
+    r"(?:/(?:comments|reviews)\b|(?:-X|--method)\s*(?:POST|PATCH|PUT)\b)",
     re.IGNORECASE,
 )
 
 # `-f body=...` / `-F body=@path`; gh reads the file when the value starts with @.
 GH_BODY_FILE = re.compile(r"-{1,2}[fF]\s+\w+=@(\S+)")
+# `git commit -F path` / `--file path`, `gh pr ... --body-file path`, `gh api ... --input path`.
+BODY_FILE_FLAG = re.compile(r"(?:--body-file|--input|--file|-F)\s+(?!\S*=)([^\s'\"]+)")
 
 MAX_BASELINE_BYTES = 2_000_000
 LOG_PATH = os.environ.get("BAN_WORDS_LOG") or os.path.expanduser("~/.claude/ban-words.log")
@@ -145,10 +148,11 @@ def scanned_new_text(tool, tool_input):
 
 
 def resolved_body_files(cmd):
-    """Text of any `body=@path` files the command posts, so a body kept in a
-    file is scanned like an inline one. Unreadable paths contribute nothing."""
+    """Text of any body, message or input files the command publishes, so a
+    body kept in a file is scanned like an inline one. Unreadable paths
+    contribute nothing."""
     texts = []
-    for path in GH_BODY_FILE.findall(cmd):
+    for path in GH_BODY_FILE.findall(cmd) + BODY_FILE_FLAG.findall(cmd):
         try:
             with open(os.path.expanduser(path), "r", errors="replace") as fh:
                 texts.append(fh.read(MAX_BASELINE_BYTES))
