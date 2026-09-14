@@ -26,12 +26,14 @@ rake install
 `rake install` does three things, each also available on its own:
 
 - `rake link` symlinks every file in `claude/scripts` and `claude/hooks` into
-  the same directory under `~/.claude`. Existing symlinks are replaced; a real
-  file in the way stops the task; files you keep there yourself are untouched.
+  the same directory under `~/.claude`. Existing symlinks are replaced, links
+  into this repository whose source is gone are removed, a real file in the
+  way stops the task, and files you keep there yourself are untouched.
 - `rake settings:overrides` deep-merges `claude/settings.overrides.json` into
   `~/.claude/settings.json`. Keys in the overrides file win; every other key
   in your settings is left alone. Under `hooks`, entries are matched by
-  command (a leading `/Users/<name>` counts as `~`) and replaced in place, so
+  command (a leading `/Users/<name>` counts as `~`, and the file extension is
+  ignored so a hook survives a change of language) and replaced in place, so
   your own hooks in the same event keep running. The previous file is copied
   to `~/.claude/backups/` first. `rake settings:diff` shows the change without
   writing.

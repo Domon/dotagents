@@ -64,7 +64,9 @@ module Dotagents
     end
 
     def self.home_agnostic(command)
-      command.to_s.gsub(%r{/Users/[^/\s"']+}, "~")
+      command.to_s
+             .gsub(%r{/Users/[^/\s"']+}, "~")
+             .gsub(%r{(/[^/\s"']+)\.\w+(?=["'\s]|\z)}, '\1')
     end
   end
 
@@ -79,6 +81,20 @@ module Dotagents
       FileUtils.rm_f(target)
       FileUtils.ln_s(source, target)
       out.puts "link  #{target} -> #{source}"
+    end
+    prune_dangling(source_dir, target_dir, out)
+  end
+
+  def self.prune_dangling(source_dir, target_dir, out)
+    Dir.children(target_dir).sort.each do |name|
+      target = File.join(target_dir, name)
+      next unless File.symlink?(target)
+
+      destination = File.readlink(target)
+      next unless destination.start_with?("#{source_dir}/") && !File.exist?(destination)
+
+      FileUtils.rm(target)
+      out.puts "prune #{target}"
     end
   end
 

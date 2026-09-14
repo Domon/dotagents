@@ -51,8 +51,8 @@ the next run overwrites the hand edit. Run `rake settings:diff` first.
 
 Arrays are replaced, not combined, except under `hooks`: there a group is
 matched by its `matcher` and an entry by its `command`, with a leading
-`/Users/<name>` read as `~`, and a match is replaced in place while anything
-unmatched is appended. Other list-valued keys stay out of the overrides file.
+`/Users/<name>` read as `~` and the file extension ignored, and a match is
+replaced in place while anything unmatched is appended. Other list-valued keys stay out of the overrides file.
 
 ## Code
 

@@ -81,6 +81,18 @@ class MergeSettingsTest < Minitest::Test
     once = merge(overrides)
     assert_equal once, Dotagents.merge_settings(once, overrides)
   end
+
+  def test_same_hook_in_another_language_replaces_in_place
+    renamed_entry = tilde_entry.merge("command" => "~/.claude/hooks/turn-cost.py")
+    merged = merge({ "hooks" => { "Stop" => [{ "hooks" => [renamed_entry] }] } })
+    assert_equal ["agent-deck hook-handler", "~/.claude/hooks/turn-cost.py"],
+                 merged["hooks"]["Stop"][0]["hooks"].map { |entry| entry["command"] }
+  end
+
+  def test_same_name_in_another_directory_is_a_different_hook
+    refute Dotagents::Hooks.same_command?("~/.claude/hooks/a.rb", "~/.claude/scripts/a.rb")
+    assert Dotagents::Hooks.same_command?("bash ~/.claude/scripts/a.sh", "bash #{HOME}/.claude/scripts/a")
+  end
 end
 
 class SettingsOverridesTest < Minitest::Test
@@ -185,6 +197,16 @@ class LinkEntriesTest < Minitest::Test
     File.write(File.join(@target, "private.rb"), "mine")
     link
     assert_equal "mine", File.read(File.join(@target, "private.rb"))
+  end
+
+  def test_prunes_dangling_links_into_the_source_but_not_others
+    FileUtils.mkdir_p(@target)
+    File.symlink(File.join(@source, "gone.py"), File.join(@target, "gone.py"))
+    File.symlink(File.join(@dir, "elsewhere"), File.join(@target, "foreign"))
+    output = link
+    assert_includes output, "prune #{@target}/gone.py"
+    refute File.symlink?(File.join(@target, "gone.py"))
+    assert File.symlink?(File.join(@target, "foreign"))
   end
 
   def test_refuses_to_overwrite_a_real_file
