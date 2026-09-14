@@ -38,7 +38,8 @@ rake install
   your own hooks in the same event keep running. The previous file is copied
   to `~/.claude/backups/` first. `rake settings:diff` shows the change without
   writing.
-- `rake githooks` sets `core.hooksPath` so the audit runs before each commit.
+- `rake githooks` sets `core.hooksPath` so the audit runs before each commit
+  and the approval check before each push.
 
 ## Components
 

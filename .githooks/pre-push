@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/dotagents"
+
+review = Dotagents::CodexReview.for(Dir.pwd)
+exit 0 unless review
+
+remote = ARGV.fetch(0, "origin")
+missing = $stdin.each_line.flat_map do |line|
+  _local_ref, local_sha, _remote_ref, remote_sha = line.split
+  next [] if local_sha.nil? || local_sha.match?(Dotagents::CodexReview::ZERO_SHA)
+
+  review.unapproved(review.pushed(local_sha, remote_sha, remote))
+end.uniq
+
+exit 0 if missing.empty?
+
+warn "pre-push: #{missing.size} commit(s) have no Codex approval:"
+missing.each { |sha| warn "  #{sha[0, 7]} #{review.subject(sha)}" }
+warn "Run /codex-review, then push again."
+exit 1

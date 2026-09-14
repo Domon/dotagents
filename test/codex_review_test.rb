@@ -125,3 +125,59 @@ class CodexReviewTest < Minitest::Test
     end
   end
 end
+
+class PrePushHookTest < Minitest::Test
+  include CodexReviewRepo
+
+  def enable_hooks(root)
+    git!(root, "config", "core.hooksPath", File.join(ROOT, ".githooks"))
+  end
+
+  def test_push_is_refused_while_a_commit_lacks_approval
+    with_repo do |root, _review|
+      base = git!(root, "rev-parse", "origin/main").chomp
+      sha = commit(root, "a.txt", "first")
+      enable_hooks(root)
+      _out, err, status = git(root, "push", "-q", "origin", "main")
+      refute status.success?
+      assert_includes err, "#{sha[0, 7]} first"
+      assert_includes err, "/codex-review"
+      assert_equal base, git!(root, "rev-parse", "origin/main").chomp
+    end
+  end
+
+  def test_push_proceeds_once_every_commit_is_approved
+    with_repo do |root, review|
+      a = commit(root, "a.txt", "first")
+      b = commit(root, "b.txt", "second")
+      review.record!(a, session: "s")
+      review.record!(b, session: "s")
+      enable_hooks(root)
+      _out, err, status = git(root, "push", "-q", "origin", "main")
+      assert status.success?, err
+      assert_equal b, git!(root, "rev-parse", "origin/main").chomp
+    end
+  end
+
+  def test_new_branch_is_refused_then_allowed
+    with_repo do |root, review|
+      git!(root, "checkout", "-q", "-b", "feature")
+      sha = commit(root, "a.txt", "first")
+      enable_hooks(root)
+      _out, _err, status = git(root, "push", "-q", "-u", "origin", "feature")
+      refute status.success?
+      review.record!(sha, session: "s")
+      _out, err, status = git(root, "push", "-q", "-u", "origin", "feature")
+      assert status.success?, err
+    end
+  end
+
+  def test_deleting_a_remote_branch_is_allowed
+    with_repo do |root, _review|
+      git!(root, "push", "-q", "origin", "main:feature")
+      enable_hooks(root)
+      _out, err, status = git(root, "push", "-q", "origin", "--delete", "feature")
+      assert status.success?, err
+    end
+  end
+end
