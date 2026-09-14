@@ -181,3 +181,55 @@ class PrePushHookTest < Minitest::Test
     end
   end
 end
+
+class StopHookTest < Minitest::Test
+  include CodexReviewRepo
+
+  HOOK = File.join(ROOT, ".claude", "hooks", "codex-review-stop.rb")
+
+  def stop(cwd, extra = {})
+    input = JSON.generate({ "cwd" => cwd, "hook_event_name" => "Stop" }.merge(extra))
+    out, status = Open3.capture2(RbConfig.ruby, HOOK, stdin_data: input)
+    assert status.success?, "stop hook must exit 0"
+    out.empty? ? nil : JSON.parse(out)
+  end
+
+  def test_blocks_while_an_unpushed_commit_lacks_approval
+    with_repo do |root, _review|
+      sha = commit(root, "a.txt", "first")
+      result = stop(root)
+      assert_equal "block", result["decision"]
+      assert_includes result["reason"], sha[0, 7]
+      assert_includes result["reason"], "/codex-review"
+    end
+  end
+
+  def test_silent_once_every_commit_is_approved
+    with_repo do |root, review|
+      sha = commit(root, "a.txt", "first")
+      review.record!(sha, session: "s")
+      assert_nil stop(root)
+    end
+  end
+
+  def test_silent_with_nothing_unpushed
+    with_repo { |root, _review| assert_nil stop(root) }
+  end
+
+  def test_silent_on_the_continuation_after_its_own_block
+    with_repo do |root, _review|
+      commit(root, "a.txt", "first")
+      assert_nil stop(root, "stop_hook_active" => true)
+    end
+  end
+
+  def test_silent_outside_a_repository
+    Dir.mktmpdir { |dir| assert_nil stop(dir) }
+  end
+
+  def test_malformed_input_is_ignored
+    out, status = Open3.capture2(RbConfig.ruby, HOOK, stdin_data: "not json")
+    assert status.success?
+    assert_empty out
+  end
+end
