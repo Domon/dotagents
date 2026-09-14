@@ -56,12 +56,4 @@ namespace :audit do
   end
 end
 
-Rake::TestTask.new("test:ruby") { |t| t.pattern = "test/*_test.rb" }
-
-desc "Run the Python tests"
-task "test:python" do
-  sh "python3", "-m", "unittest", "discover", "-s", "test", "-p", "*_test.py"
-end
-
-desc "Run all tests"
-task test: %w[test:ruby test:python]
+Rake::TestTask.new(:test) { |t| t.pattern = "test/*_test.rb" }

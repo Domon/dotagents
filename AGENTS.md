@@ -56,10 +56,9 @@ replaced in place while anything unmatched is appended. Other list-valued keys s
 
 ## Code
 
-Ruby for new code. Behaviour lives in `lib/dotagents.rb` with tests in
-`test/`, run by `rake test`. A hook keeps the language it arrived in, and its
-tests sit in `test/` in that language. New behaviour arrives with a test. No
-comments unless the code cannot say it.
+Ruby. Behaviour lives in `lib/dotagents.rb` and the hooks under `claude/`,
+with tests in `test/`, run by `rake test`. New behaviour arrives with a test.
+No comments unless the code cannot say it.
 
 ## Git
 

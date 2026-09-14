@@ -14,7 +14,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "~/.claude/hooks/ban-words.py",
+            "command": "~/.claude/hooks/ban-words.rb",
             "timeout": 10,
             "statusMessage": "checking banned words"
           }
