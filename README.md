@@ -6,6 +6,8 @@ the layout leaves room for Codex and Pi.
 
 ```
 skills/                    tool-neutral SKILL.md directories (coming)
+.claude/                   settings and skills for working on this repository
+.githooks/                 pre-commit audit, pre-push approval check
 claude/
   README.md                what each Claude Code piece does
   settings.overrides.json  keys merged into ~/.claude/settings.json
@@ -15,7 +17,7 @@ claude/
 
 ## Install
 
-Requires Ruby and `jq`.
+Requires Ruby and `jq`. Development also needs the Codex CLI for the review step.
 
 ```sh
 git clone git@github.com:Domon/dotagents.git ~/.dotagents
@@ -64,6 +66,23 @@ so the list itself is never published; `.audit-terms.example` shows the
 format. A list with no terms, comments only, is valid: the path and email
 checks run regardless. The pre-commit hook runs `rake audit:staged`, which
 checks only the content staged for the next commit.
+
+## Review before push
+
+Every commit is reviewed by Codex before it leaves the machine. The
+`/codex-review` project skill sends each unpushed commit, message and patch,
+to Codex against the Reviewing section of `AGENTS.md`, fixes what it finds,
+and records the approval under `.git/codex-review/<sha>`. The pre-push hook
+refuses a push that contains a commit without a record, and the Stop hook in
+`.claude/settings.json` asks for the review when a turn ends with unapproved
+commits. Records are per sha: amending or rebasing a commit means reviewing
+it again. To force a re-review, delete its record.
+
+```sh
+rake review:status                # unpushed commits, approved or pending
+rake review:bundle                # what the reviewer receives
+rake review:record SESSION=<id>   # record approval for every unpushed commit
+```
 
 ## License
 

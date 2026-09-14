@@ -57,3 +57,34 @@ namespace :audit do
 end
 
 Rake::TestTask.new(:test) { |t| t.pattern = "test/*_test.rb" }
+
+def codex_review
+  Dotagents::CodexReview.for(__dir__) || abort("review: not a git repository")
+end
+
+namespace :review do
+  desc "List unpushed commits and whether Codex has approved each"
+  task :status do
+    review = codex_review
+    review.unpushed.each do |sha|
+      puts "#{review.approved?(sha) ? 'approved' : 'pending '} #{sha[0, 7]} #{review.subject(sha)}"
+    end
+  end
+
+  desc "Print the pending commits, message and patch, for the reviewer"
+  task :bundle do
+    review = codex_review
+    abort "review: nothing pending" if review.pending.empty?
+    print review.bundle(review.pending)
+  end
+
+  desc "Record Codex approval for every unpushed commit; SESSION=<codex session id>"
+  task :record do
+    session = ENV.fetch("SESSION") { abort "review: set SESSION to the Codex session id" }
+    review = codex_review
+    review.unpushed.each do |sha|
+      review.record!(sha, session: session)
+      puts "approved #{sha[0, 7]} #{review.subject(sha)}"
+    end
+  end
+end
