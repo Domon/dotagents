@@ -77,5 +77,7 @@ These are deliberate and are not findings:
 
 ## Documentation
 
-When a rake task, path, or install step changes, update `README.md` in the
-same commit.
+When a rake task, path, or install step changes, update the README that
+documents it in the same commit: the root `README.md` for install, layout
+and development, the tool folder's README (`claude/README.md`) for that
+tool's components.

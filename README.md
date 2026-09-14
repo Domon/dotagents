@@ -7,6 +7,7 @@ the layout leaves room for Codex and Pi.
 ```
 skills/                    tool-neutral SKILL.md directories (coming)
 claude/
+  README.md                what each Claude Code piece does
   settings.overrides.json  keys merged into ~/.claude/settings.json
   scripts/                 status line scripts, linked into ~/.claude/scripts
   hooks/                   Claude Code hooks, linked into ~/.claude/hooks
@@ -37,82 +38,30 @@ rake install
   your own hooks in the same event keep running. The previous file is copied
   to `~/.claude/backups/` first. `rake settings:diff` shows the change without
   writing.
-- `rake githooks` sets `core.hooksPath` so `rake audit:staged` runs before each commit.
+- `rake githooks` sets `core.hooksPath` so the audit runs before each commit.
 
-## Status line
+## Components
 
-`claude/scripts/statusline.sh` prints model, effort, working directory,
-session id, cost, and context usage on one line, shortening the directory
-only as far as the terminal width demands. `subagent-statusline.rb` does the
-same for subagents. To use them without the rest of the repo, copy the two
-scripts and add to `~/.claude/settings.json`:
+| Tool        | Piece        | Purpose                                                   | Docs                                    |
+| ----------- | ------------ | --------------------------------------------------------- | --------------------------------------- |
+| Claude Code | status line  | model, effort, cwd, session, cost and context on one line | [claude/README.md](claude/README.md#status-line)  |
+| Claude Code | turn cost    | Stop hook that prices each turn from the transcript       | [claude/README.md](claude/README.md#turn-cost)    |
+| Claude Code | banned words | PreToolUse hook that blocks vague filler nouns in new text | [claude/README.md](claude/README.md#banned-words) |
 
-```json
-{
-  "statusLine": { "type": "command", "command": "bash ~/.claude/scripts/statusline.sh" },
-  "subagentStatusLine": { "type": "command", "command": "~/.claude/scripts/subagent-statusline.rb" }
-}
+## Development
+
+```sh
+rake test            # the whole suite
+rake audit           # every file, against .audit-terms plus path and email checks
+rake settings:diff   # what settings:overrides would change
 ```
-
-## Turn cost
-
-`claude/hooks/turn-cost.rb` is a Stop hook that prices the turn just finished
-from the session transcript, shows one line in Claude Code, and appends the
-detail to `~/.claude/logs/turn-costs.jsonl`. Prices live in a table at the top
-of the script; update them when models or prices change.
-
-## Banned words
-
-`claude/hooks/ban-words.rb` is a PreToolUse hook that blocks newly written
-text using four filler terms: "surface" and "affordance" as nouns,
-"load-bearing", and "clamp" in any form, the last because the word hides
-which direction a limit works. The aim is to stop new uses without blocking
-references to things that already exist or legitimate verbs. Three
-mechanisms do that:
-
-- Word boundaries. The patterns match the standalone word only, so compound
-  identifiers such as `surfaceTint` or `paint_surface` never match, even in
-  new code. The verbs "surfacing" and "surfaced" are never matched, and
-  "clamp" in call syntax (`clamp(`, `std::clamp`, `Math.clamp`, `_.clamp`) is
-  an API name, not prose.
-- Baseline diff. For Write and Edit the hook reads the file's current content
-  and blocks only a word whose type is not already present, so a file that
-  already says "surface" can keep saying it.
-- Confirm on re-run. A pattern cannot tell the noun "surface" from the verb in
-  "react-router surfaces the request". The first hit blocks with guidance; if
-  the agent judges the use legitimate and re-runs the identical call within
-  fifteen minutes, it passes once. No user prompt is involved, and every
-  block and override is logged.
-
-Scanned: Write content and Edit new strings, diffed against the file on disk;
-and for Bash, text that `git commit`, `gh pr create|edit|comment|review` and
-`gh api` writes carry inline or in a file named by `-F`, `--file`,
-`--body-file`, `--input` or `body=@file`. Exempt: files beside the hook's real
-location, `~/.claude/hooks` and `settings.json`, and agent instruction files
-(`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`) where the rule itself is spelled out.
-
-Logs: one JSON line per block or override in `~/.claude/ban-words.log`, and
-pending confirmations in `~/.claude/.ban-words-pending.json`, both kept
-owner-readable only. `BAN_WORDS_LOG` and `BAN_WORDS_PENDING` override the
-paths, which the tests use. Logging never affects the decision.
-
-## Audit
 
 `rake audit` fails when any file contains a term from `.audit-terms`, an
 absolute `/Users/...` path, or an email address. `.audit-terms` is gitignored
 so the list itself is never published; `.audit-terms.example` shows the
 format. A list with no terms, comments only, is valid: the path and email
-checks run regardless.
-
-`rake audit:staged` checks only the content staged for the next commit,
-which is what the pre-commit hook runs: a file edited after `git add` is
-judged by its staged copy, and untracked files are skipped.
-
-## Development
-
-```sh
-rake test
-```
+checks run regardless. The pre-commit hook runs `rake audit:staged`, which
+checks only the content staged for the next commit.
 
 ## License
 
