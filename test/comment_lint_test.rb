@@ -90,7 +90,7 @@ class CommentLintTest < Minitest::Test
   end
 
   def test_register_word_in_new_comment_blocks
-    assert_denied decide(edit_input("// Mirrors the compression tier MiddleOutCard applies.\nreturn null;\n")),
+    assert_denied decide(edit_input("// Mirrors the compression tier BenchmarkRunCard applies.\nreturn null;\n")),
                   mentioning: "mirrors"
   end
 
@@ -103,11 +103,11 @@ class CommentLintTest < Minitest::Test
   end
 
   def test_singular_mirror_approves
-    assert_nil decide(edit_input("// Each shard must mirror the pied-piper index layout.\nconst a = 1;\n"))
+    assert_nil decide(edit_input("// Each shard must mirror the corpus shard layout.\nconst a = 1;\n"))
   end
 
   def test_stories_tsx_exempt
-    assert_nil decide(edit_input("// a\n// b\n// c\n// d\n", file_path: "/tmp/x/MiddleOutPanel.stories.tsx"))
+    assert_nil decide(edit_input("// a\n// b\n// c\n// d\n", file_path: "/tmp/x/BenchmarkRunCard.stories.tsx"))
   end
 
   def test_hooks_dir_exempt

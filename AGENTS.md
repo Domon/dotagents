@@ -24,9 +24,8 @@ such as `~/.claude`. For each file:
 2. Run `rake link` so the old path becomes a symlink to the new location.
 3. Delete any leftover copy elsewhere so exactly one copy exists.
 4. Scrub comments, example paths, test fixtures, and URLs before staging.
-   Example identifiers in messages, comments and fixtures are invented, never
-   lifted from a real codebase; the fictional names are Pied Piper for the
-   organisation and middle-out for the application.
+   Example identifiers in messages, comments and fixtures come from the
+   imagined codebase below, never from a real one.
 5. Run `rake audit` and read every finding.
 
 Never add a real term to `.audit-terms.example`. Real terms go in the
@@ -56,24 +55,70 @@ replaced in place while anything unmatched is appended. Other list-valued keys s
 
 ## Code
 
-Ruby. Behaviour lives in `lib/dotagents.rb` and the hooks under `claude/`,
-with tests in `test/`, run by `rake test`. New behaviour arrives with a test.
-No comments unless the code cannot say it.
+Ruby. Behaviour lives in `lib/dotagents.rb` and the hooks under
+`claude/hooks/`, `.claude/hooks/` and `.githooks/`, with tests in `test/`,
+run by `rake test`. New behaviour arrives with a test. No comments unless
+the code cannot say it.
 
 ## Git
 
-Commits are signed. `.githooks/pre-commit` runs `rake audit`; never bypass it
-with `--no-verify`. Do not push. The owner reviews every commit before it
-leaves the machine.
+Commits are signed. `.githooks/pre-commit` runs `rake audit:staged` and
+`.githooks/pre-push` checks that Codex approved every commit; never bypass
+either with `--no-verify`. Do not push. The owner reviews every commit
+before it leaves the machine, after Codex has.
 
 ## Reviewing
+
+Every commit is reviewed by Codex before it is pushed, through the
+`/codex-review` skill; `.githooks/pre-push` refuses a commit without a
+recorded approval. The unit of review is one commit: its patch and its
+message together. Uncommitted work is not reviewed.
+
+The patch is held to the rules in this file.
+
+The message describes this repository's change to a reader of this
+repository: an imperative subject, then a few short lines on what changed
+and why it matters here. Anything that reader could not follow from this
+repository and public sources is out, and how the commit was produced is
+not part of the change. Trailers are attribution, not content.
+
+Severity, in the order the owner cares about:
+
+- P0: anything private or employer-specific in the patch or the message.
+  This is the reason the review exists.
+- P1: a message about the process rather than the change; behaviour in
+  `lib/` or a hook without a test; a non-executable hook.
+- P2: everything else. Readable code wins over complete edge-case coverage.
+
+A commit is REVISE on a P0 or P1 and is amended in place rather than
+followed by a fix-up commit. P2 findings are reported to the owner, not
+acted on, unless the owner asks.
 
 These are deliberate and are not findings:
 
 - The Pied Piper and middle-out names, and paths built from them.
-- The four banned words appearing in `claude/hooks/ban-words.py`, its tests,
+- The four banned words appearing in `claude/hooks/ban-words.rb`, its tests,
   and the README section about it. They are the rule's own subject.
-- Hook logs and state files under `~/.claude`.
+- Commit metadata: author name and email, the signature, trailers.
+- Hook logs and state files under `~/.claude`, and approval records under
+  `.git/codex-review`.
+
+## The imagined codebase
+
+Fixtures, examples and sample paths come from one fictional company so they
+never resemble a real one. Invent within it; never lift a name from a real
+codebase.
+
+| Role | Names |
+| --- | --- |
+| Organisation, GitHub org | Pied Piper, `pied-piper` |
+| Application, repository | middle-out, `pied-piper/middle-out`: a compression benchmark service. Codecs and corpora are submitted, benchmark runs are scored, a leaderboard ranks them. Rails API plus React front end. |
+| Ruby models and services | `Codec`, `Corpus`, `BenchmarkRun`, `Weissman::Score`, `Leaderboard`; `app/services/score_benchmark_run.rb` |
+| React components and stories | `CodecPicker`, `CorpusSelect`, `BenchmarkRunCard`, `WeissmanScoreBadge`, `LeaderboardTable`; `BenchmarkRunCard.stories.tsx` |
+| Hosts | `middle-out.test`, `api.middle-out.test` |
+| Tickets and pull requests | `PP-4242`, PR 4242 |
+| People | Roles only: "a reviewer", "the submitter". Never names. |
+| Terms that must never be committed, used only in `.audit-terms.example` and the audit tests | Hooli: `Hooli`, `hooli.internal`, `HOOLI-` |
 
 ## Documentation
 
