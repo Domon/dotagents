@@ -72,6 +72,8 @@ module Dotagents
   end
 
   def self.link_entries(source_dir, target_dir, out: $stdout)
+    return unless Dir.exist?(source_dir)
+
     FileUtils.mkdir_p(target_dir)
     Dir.children(source_dir).sort.each do |name|
       source = File.join(source_dir, name)

@@ -38,8 +38,9 @@ gitignored `.audit-terms`.
 - Tool-specific content sits under a folder named for the tool: `claude/`
   today, `codex/` and `pi/` when needed. Each mirrors that tool's own config
   directory, so `claude/scripts/` corresponds to `~/.claude/scripts/`.
-- Files are linked one at a time, never as whole directories, so this
-  repository and private sources can both feed the same target directory.
+- Entries are linked one at a time, never a whole target directory, so this
+  repository and private sources can both feed the same target directory. A
+  file is one entry; a skill directory is one entry.
 
 ## Settings
 

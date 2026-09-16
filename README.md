@@ -5,7 +5,7 @@ linked into each tool's own directory. Today it holds Claude Code pieces;
 the layout leaves room for Codex and Pi.
 
 ```
-skills/                    tool-neutral SKILL.md directories (coming)
+skills/                    tool-neutral SKILL.md directories, linked into ~/.claude/skills and ~/.agents/skills
 .claude/                   settings and skills for working on this repository
 .githooks/                 pre-commit audit, pre-push approval check
 claude/
@@ -29,9 +29,11 @@ rake install
 `rake install` does three things, each also available on its own:
 
 - `rake link` symlinks every file in `claude/scripts` and `claude/hooks` into
-  the same directory under `~/.claude`. Existing symlinks are replaced, links
-  into this repository whose source is gone are removed, a real file in the
-  way stops the task, and files you keep there yourself are untouched.
+  the same directory under `~/.claude`, and every directory in `skills/` into
+  both `~/.claude/skills` and `~/.agents/skills`, one link per skill so
+  Claude Code and Codex read the same files. Existing symlinks are replaced,
+  links into this repository whose source is gone are removed, a real file in
+  the way stops the task, and files you keep there yourself are untouched.
 - `rake settings:overrides` deep-merges `claude/settings.overrides.json` into
   `~/.claude/settings.json`. Keys in the overrides file win; every other key
   in your settings is left alone. Under `hooks`, entries are matched by

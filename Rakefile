@@ -11,11 +11,15 @@ desc "Link scripts and hooks into ~/.claude, apply settings overrides, enable gi
 task install: %w[link settings:overrides githooks]
 
 LINKED_DIRS = %w[scripts hooks].freeze
+SKILL_TARGETS = [File.join(CLAUDE_HOME, "skills"), File.expand_path("~/.agents/skills")].freeze
 
-desc "Symlink each file in claude/{#{LINKED_DIRS.join(',')}} into the same directory under ~/.claude"
+desc "Symlink claude/{#{LINKED_DIRS.join(',')}} files under ~/.claude and each skills/ directory into ~/.claude/skills and ~/.agents/skills"
 task :link do
   LINKED_DIRS.each do |dir|
     Dotagents.link_entries(File.join(__dir__, "claude", dir), File.join(CLAUDE_HOME, dir))
+  end
+  SKILL_TARGETS.each do |target|
+    Dotagents.link_entries(File.join(__dir__, "skills"), target)
   end
 end
 

@@ -216,6 +216,21 @@ class LinkEntriesTest < Minitest::Test
     assert_match(/not a symlink/, error.message)
     assert_equal "real", File.read(File.join(@target, "a.sh"))
   end
+
+def test_links_a_directory_entry_as_one_symlink
+  skill = File.join(@source, "tidy")
+  FileUtils.mkdir_p(skill)
+  File.write(File.join(skill, "SKILL.md"), "---\nname: tidy\n---\n")
+  link
+  assert_equal skill, File.readlink(File.join(@target, "tidy"))
+  assert File.file?(File.join(@target, "tidy", "SKILL.md"))
+end
+
+def test_does_nothing_when_the_source_directory_is_missing
+  FileUtils.remove_entry(@source)
+  assert_equal [], link
+  refute Dir.exist?(@target)
+end
 end
 
 class AuditTest < Minitest::Test
