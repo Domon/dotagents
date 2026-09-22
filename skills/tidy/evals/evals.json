@@ -1,0 +1,21 @@
+{
+  "skill_name": "tidy",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "evals/files/leaderboard-placement `for f in $(find . -name '*.rb' | sort); do git diff --no-index /dev/null \"$f\"; done`",
+      "expected_output": "A tidy pass in the skill's output format. Opens with an Interface block for Leaderboard::Placement listing all seven module_function methods with their callers (call: RunCard.for and the spec; the other six: none outside the module) and one call written out. Proposes Hide Method for the six helpers and Rename Function for `call` (any descriptive name), and does not treat Leaderboard::Tiers sharing the module_function idiom as a reason to leave them public. Keeps at least one body-level finding inside Placement (the repeated score read, the nil run, or the rank lookup). Ends with Removals and Out of scope sections.",
+      "files": [
+        "evals/files/leaderboard-placement"
+      ],
+      "expectations": [
+        "The output opens with an Interface block for Leaderboard::Placement that lists all seven public methods (call, ranked, rank_of, tier_for, margin_over, displaces?, provisional?) with their callers, and writes out one call site such as Placement.call(run, board:)",
+        "A finding proposes Hide Method (private under class << self, private_class_method, or dropping module_function) for the six helper methods of Leaderboard::Placement",
+        "A finding proposes Rename Function for Leaderboard::Placement.call to a name that says what comes back (e.g. of, for, place)",
+        "The output does not cite Leaderboard::Tiers using module_function as a reason to keep the Placement helpers public",
+        "At least one finding is a body-level move inside Leaderboard::Placement (e.g. Extract Method on the repeated run&.weissman_score.to_f, Introduce Special Case for the nil run, Substitute Algorithm in rank_of), so the pass still reads method bodies and not only the interface",
+        "The output ends with a Removals section and an Out of scope section, each present and non-empty"
+      ]
+    }
+  ]
+}
