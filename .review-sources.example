@@ -1,0 +1,3 @@
+# One path per line: private codebases nothing in this repository may resemble. Copy to .review-sources (gitignored).
+# The Codex reviewer searches them, history included, for the shape behind every example, fixture and snippet.
+~/src/pied-piper/middle-out

@@ -38,7 +38,7 @@ wc -c < "$DIR/commits.md"
 codex exec -s read-only -C "$(git rev-parse --show-toplevel)" -o "$DIR/round-1.md" "$(cat <<'PROMPT'
 You are reviewing commits of this repository before they are pushed. Read AGENTS.md first: "What this repository is" lists what must never appear, "Reviewing" is the guideline for both the patch and the message of a commit, and "The imagined codebase" is the only source of example names.
 
-The commits follow in the stdin block, oldest first, each with its full message and its patch. Review the message and the patch of every commit against the guideline. Report each finding as: `file:line` or `message`, then P0 (must fix), P1 (should fix) or P2 (optional), then what is wrong and how to fix it.
+The commits follow in the stdin block, oldest first, each with its full message and its patch. When the block opens with a "Private codebases" section, do what it says before anything else: read those codebases and their history, and treat a renamed copy of their code as a P0. Review the message and the patch of every commit against the guideline. Report each finding as: `file:line` or `message`, then P0 (must fix), P1 (should fix) or P2 (optional), then what is wrong and how to fix it.
 
 For each commit end with one line, `<sha>: APPROVED` or `<sha>: REVISE`. A commit is REVISE when it has a P0 or P1 finding.
 
@@ -56,8 +56,12 @@ mentions `$DIR` or `$SESSION` takes the printed values pasted in literally.
 
 When the bundle is larger than 512000 bytes, pass `</dev/null` instead of
 the file and add to the prompt: "The commits are: <shas>. Run `git show
-<sha>` for each." When the user passed notes, append them to the prompt
-under "Notes from the user:".
+<sha>` for each. If `.review-sources` exists at the repository root, each
+line is a private codebase nothing here may resemble; search them and their
+history for the shape behind every example and fixture, and treat a renamed
+copy as a P0." When
+the user passed notes, append them to the prompt under "Notes from the
+user:".
 
 ## 3. Read the verdict
 

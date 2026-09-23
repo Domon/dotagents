@@ -98,6 +98,24 @@ class CodexReviewTest < Minitest::Test
       assert_includes text, "# Commit #{sha}"
       assert_includes text, "Add a\n\nBody line."
       assert_includes text, "+++ b/a.txt"
+      refute_includes text, "# Private codebases"
+    end
+  end
+
+  def test_bundle_opens_with_the_private_sources_when_listed
+    with_repo do |root, review|
+      File.write(File.join(root, ".review-sources"), "# nothing here may resemble these\n\n~/src/pied-piper/middle-out\n/srv/pied-piper/nucleus\n")
+      sha = commit(root, "a.txt", "Add a")
+      text = review.bundle([sha])
+      assert text.start_with?("# Private codebases\n"), text.lines.first
+      assert_includes text, "- #{File.expand_path('~/src/pied-piper/middle-out')}\n- /srv/pied-piper/nucleus\n"
+      assert_operator text.index("# Private codebases"), :<, text.index("# Commit #{sha}")
+    end
+  end
+
+  def test_private_sources_is_empty_without_the_file
+    with_repo do |_root, review|
+      assert_empty review.private_sources
     end
   end
 

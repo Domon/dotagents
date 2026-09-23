@@ -22,7 +22,8 @@ Requires Ruby and `jq`. Development also needs the Codex CLI for the review step
 ```sh
 git clone git@github.com:Domon/dotagents.git ~/.dotagents
 cd ~/.dotagents
-cp .audit-terms.example .audit-terms   # replace the example terms with your own
+cp .audit-terms.example .audit-terms         # replace the example terms with your own
+cp .review-sources.example .review-sources   # list private codebases nothing here may resemble
 rake install
 ```
 
@@ -79,6 +80,13 @@ refuses a push that contains a commit without a record, and the Stop hook in
 `.claude/settings.json` asks for the review when a turn ends with unapproved
 commits. Records are per sha: amending or rebasing a commit means reviewing
 it again. To force a re-review, delete its record.
+
+A term list cannot catch private code whose names were changed. When
+`.review-sources` lists private codebases, the bundle opens by asking the
+reviewer to search them, history included, for the shape behind every
+example, fixture and snippet in the commits, and to treat a match as a P0.
+Codex's read-only sandbox can read those paths; the file is gitignored and
+`.review-sources.example` shows the format.
 
 ```sh
 rake review:status                # unpushed commits, approved or pending

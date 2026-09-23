@@ -317,14 +317,40 @@ module Dotagents
     end
 
     def bundle(shas)
-      shas.map do |sha|
+      commits = shas.map do |sha|
         message = git("log", "-1", "--format=%B", sha).to_s
         patch = git("show", "--stat", "--patch", "--format=", sha).to_s
         "# Commit #{sha}\n\n## Message\n\n```\n#{message}```\n\n## Patch\n\n```diff\n#{patch}```\n"
-      end.join("\n")
+      end
+      ([private_sources_section] + commits).compact.join("\n")
+    end
+
+    def private_sources
+      path = File.join(@root, ".review-sources")
+      return [] unless File.exist?(path)
+
+      File.readlines(path, chomp: true).map(&:strip).reject { |line| line.empty? || line.start_with?("#") }
+          .map { |line| File.expand_path(line) }
     end
 
     private
+
+    def private_sources_section
+      sources = private_sources
+      return nil if sources.empty?
+
+      <<~MD
+        # Private codebases
+
+        Nothing in this repository may resemble code in the codebases below.
+        Search them, including their git history, for a matching shape behind
+        every code block, fixture and comment in the patches. A renamed copy is
+        a P0 even when no identifier survives; report a close match with both
+        paths.
+
+        #{sources.map { |source| "- #{source}" }.join("\n")}
+      MD
+    end
 
     def git(*args)
       out, _err, status = Open3.capture3("git", "-C", @root, *args)

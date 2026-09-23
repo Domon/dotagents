@@ -26,10 +26,15 @@ such as `~/.claude`. For each file:
 4. Scrub comments, example paths, test fixtures, and URLs before staging.
    Example identifiers in messages, comments and fixtures come from the
    imagined codebase below, never from a real one.
-5. Run `rake audit` and read every finding.
+5. Write examples and fixtures from the move or rule they teach, not from
+   code you have open. A renamed copy of private code is still private
+   code: its structure, comments and reasoning identify it.
+6. Run `rake audit` and read every finding.
 
 Never add a real term to `.audit-terms.example`. Real terms go in the
-gitignored `.audit-terms`.
+gitignored `.audit-terms`. The same split holds for `.review-sources`, the
+gitignored list of private codebases the Codex reviewer checks every commit
+against for resemblance, and its committed example.
 
 ## Layout
 
