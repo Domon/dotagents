@@ -38,6 +38,9 @@ class TurnCostTest < Minitest::Test
     assert_equal [10, 12.50, 20, 1.00, 50], TurnCost.rates_for("claude-fable-5")
     assert_equal [10, 12.50, 20, 0.25, 50], TurnCost.rates_for("claude-fable-5-1")
     assert_equal [10, 12.50, 20, 0.25, 50], TurnCost.rates_for("claude-mythos-5-1")
+    assert_equal [4, 5, 8, 0.20, 20], TurnCost.rates_for("claude-opus-5-5")
+    assert_equal [4, 5, 8, 0.20, 20], TurnCost.rates_for("claude-opus-5-5[1m]")
+    assert_equal [5, 6.25, 10, 0.50, 25], TurnCost.rates_for("claude-opus-5")
     assert_equal [2, 2.50, 4, 0.20, 10], TurnCost.rates_for("claude-sonnet-5")
   end
 

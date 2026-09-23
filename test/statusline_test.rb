@@ -11,6 +11,7 @@ class DisplayModelTest < Minitest::Test
   CASES = {
     "claude-fable-5-1" => "Fable 5.1",
     "claude-opus-5[1m]" => "Opus 5 1M",
+    "claude-opus-5-5" => "Opus 5.5",
     "claude-haiku-4-5-20251001" => "Haiku 4.5",
     "claude-haiku-4-5-20251001[1m]" => "Haiku 4.5 1M",
     "gpt-6-astra" => "gpt-6-astra"

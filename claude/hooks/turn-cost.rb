@@ -32,9 +32,10 @@
 #
 # Prices are $/MTok (base input, 5m cache write, 1h cache write, cache
 # read, output) from https://platform.claude.com/docs/en/about-claude/pricing
-# as of 2026-09-03. Update when models or prices change.
-# Fable 5.1 / Mythos 5.1 cache reads are 0.025x base (all others 0.1x), so
-# their rows must precede the "claude-fable-5" prefix they also match.
+# as of 2026-09-23. Update when models or prices change.
+# Fable 5.1 / Mythos 5.1 cache reads are 0.025x base and Opus 5.5 reads are
+# 0.05x (all others 0.1x), so those rows must precede the "claude-fable-5" /
+# "claude-opus-5" prefixes they also match.
 
 require "fileutils"
 require "json"
@@ -47,6 +48,7 @@ module TurnCost
     "claude-mythos-5-1" => [10, 12.50, 20, 0.25, 50],
     "claude-fable-5" => [10, 12.50, 20, 1.00, 50],
     "claude-mythos-5" => [10, 12.50, 20, 1.00, 50],
+    "claude-opus-5-5" => [4, 5, 8, 0.20, 20],
     "claude-opus-5" => [5, 6.25, 10, 0.50, 25],
     "claude-opus-4-8" => [5, 6.25, 10, 0.50, 25],
     "claude-opus-4-7" => [5, 6.25, 10, 0.50, 25],
