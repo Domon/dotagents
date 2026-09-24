@@ -29,7 +29,7 @@ rake install
 
 `rake install` does three things, each also available on its own:
 
-- `rake link` symlinks every file in `claude/scripts` and `claude/hooks` into
+- `rake link` symlinks every file and folder in `claude/scripts` and `claude/hooks` into
   the same directory under `~/.claude`, and every directory in `skills/` into
   both `~/.claude/skills` and `~/.agents/skills`, one link per skill so
   Claude Code and Codex read the same files. Existing symlinks are replaced,
@@ -54,6 +54,7 @@ rake install
 | Claude Code | turn cost    | Stop hook that prices each turn from the transcript       | [claude/README.md](claude/README.md#turn-cost)    |
 | Claude Code | banned words | PreToolUse hook that blocks vague filler nouns in new text | [claude/README.md](claude/README.md#banned-words) |
 | Claude Code | comment lint | PreToolUse hook that blocks comment walls and review-register comments | [claude/README.md](claude/README.md#comment-lint) |
+| Claude Code | tidy gates   | Hooks that require a /tidy pass before Ruby is committed or a branch pushed | [claude/README.md](claude/README.md#tidy-gates) |
 
 ## Development
 

@@ -88,3 +88,26 @@ Logs: one JSON line per block or override in `~/.claude/comment-lint.log`,
 and pending confirmations in `~/.claude/.comment-lint-pending.json`, both
 kept owner-readable only. `COMMENT_LINT_LOG` and `COMMENT_LINT_PENDING`
 override the paths, which the tests use.
+
+## Tidy gates
+
+Two hooks make a /tidy pass part of committing and pushing Ruby, in the
+main session and inside subagents alike.
+
+- `hooks/require-tidy.rb` (PreToolUse, Bash) denies `git commit` when the
+  commit contains Ruby, including files a `git add` earlier in the same
+  command is about to stage, and no pass exists since `HEAD`; and `git push` when
+  the branch changed Ruby and no whole-branch pass exists on the pushed
+  commit or one of its ancestors. The denial names the exact arguments:
+  `/tidy <repo> git diff <HEAD sha>` or `/tidy <repo> git diff <base> <tip>`.
+  Generated schema files (`db/schema.rb`, `db/*_schema.rb`), deletes, tags
+  and pushes to `main` or `master` are not gated.
+- `hooks/record-tidy-pass.rb` (SubagentStop) records a pass when a fork of
+  the tidy skill finishes with its Removals and Out of scope sections,
+  taking the shas from the arguments the fork received. The agent never
+  writes a pass itself.
+
+Passes live in `~/.local/state/dotagents/tidy/<worktree key>/`
+(`$XDG_STATE_HOME` when set), one folder per worktree, managed by
+`hooks/lib/tidy_passes.rb`. Hook errors never block and are logged to
+`hook.log` in `~/.local/state/dotagents/tidy/`.

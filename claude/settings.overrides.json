@@ -30,6 +30,17 @@
             "statusMessage": "checking comment discipline"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/require-tidy.rb",
+            "timeout": 15,
+            "statusMessage": "checking for a tidy pass"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -40,6 +51,18 @@
             "command": "~/.claude/hooks/turn-cost.rb",
             "timeout": 15,
             "statusMessage": "computing turn cost"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/record-tidy-pass.rb",
+            "timeout": 15,
+            "statusMessage": "recording a tidy pass"
           }
         ]
       }
