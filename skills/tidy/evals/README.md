@@ -7,3 +7,5 @@ Re-run with the skill-creator workflow (`/skill-creator`, "Running and evaluatin
 | id | Miss it guards against | Added |
 |---|---|---|
 | 1 | Six `module_function` helpers left public and a `call` entry point on a non-callable; a sibling module using the same idiom was taken as precedent | 2026-09-16 |
+| 2 | A cap of five findings per pass stopped the read after the first class of a two-class diff | 2026-09-24 |
+| 3 | New code repeated a private method of an existing class; nothing asked the reviewer to look outside the diff | 2026-09-24 |

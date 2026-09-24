@@ -16,6 +16,35 @@
         "At least one finding is a body-level move inside Leaderboard::Placement (e.g. Extract Method on the repeated run&.weissman_score.to_f, Introduce Special Case for the nil run, Substitute Algorithm in rank_of), so the pass still reads method bodies and not only the interface",
         "The output ends with a Removals section and an Out of scope section, each present and non-empty"
       ]
+    },
+    {
+      "id": 2,
+      "prompt": "evals/files/run-scoring `for f in $(find . -name '*.rb' | sort); do git diff --no-index /dev/null \"$f\"; done`",
+      "expected_output": "A tidy pass that reads both touched classes to the end: an Interface block for ScoreBenchmarkRun and one for Leaderboard::Entry, findings in both, more than five in total, never more than five for one class. Ends with Removals and Out of scope sections.",
+      "files": [
+        "evals/files/run-scoring"
+      ],
+      "expectations": [
+        "The output has an Interface block for ScoreBenchmarkRun and an Interface block for Leaderboard::Entry",
+        "At least two findings are anchored in app/services/score_benchmark_run.rb and at least two in app/lib/leaderboard/entry.rb",
+        "The output reports more than five findings in total across the two classes",
+        "No single class or module has more than five findings",
+        "The output ends with a Removals section and an Out of scope section, each present and non-empty"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "evals/files/corpus-import git diff --no-index /dev/null app/services/import_corpus.rb",
+      "expected_output": "A tidy pass on ImportCorpus that notices the checksum line repeats Corpus#normalized_checksum in app/models/corpus.rb, a file outside the diff, and proposes one owner that both call instead of a second copy. Ends with Removals and Out of scope sections.",
+      "files": [
+        "evals/files/corpus-import"
+      ],
+      "expectations": [
+        "A finding says the checksum computation in ImportCorpus#import duplicates Corpus#normalized_checksum in app/models/corpus.rb",
+        "That finding's recommended sketch gives the checksum one owner (for example a public Corpus class method or scope) called by both Corpus and ImportCorpus, and changes app/models/corpus.rb accordingly",
+        "Every finding is anchored in app/services/import_corpus.rb; the output proposes nothing about Corpus's validations or associations",
+        "The output ends with a Removals section and an Out of scope section, each present and non-empty"
+      ]
     }
   ]
 }
