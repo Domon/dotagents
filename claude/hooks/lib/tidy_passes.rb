@@ -42,8 +42,8 @@ class TidyPasses
     File.write(File.join(dir, [base, tip].compact.join("-")), "#{JSON.generate(details)}\n")
   end
 
-  def pass_since?(head)
-    File.exist?(File.join(dir, head)) || branch_passes.any? { |_base, tip| tip == head }
+  def pass_since?(head, recorded_after: nil)
+    pass_files(head).any? { |path| recorded_after.nil? || File.mtime(path).to_i >= recorded_after }
   end
 
   def branch_tips(base)
@@ -51,6 +51,11 @@ class TidyPasses
   end
 
   private
+
+  def pass_files(head)
+    names = [head] + branch_passes.filter_map { |base, tip| "#{base}-#{tip}" if tip == head }
+    names.map { |name| File.join(dir, name) }.select { |path| File.exist?(path) }
+  end
 
   def branch_passes
     return [] unless Dir.exist?(dir)
