@@ -4,9 +4,9 @@ require "minitest/autorun"
 
 class ExecutablesTest < Minitest::Test
   ROOT = File.expand_path("..", __dir__)
-  FILES = Dir[File.join(ROOT, "claude", "{hooks,scripts}", "*")] +
-          Dir[File.join(ROOT, ".claude", "hooks", "*")] +
-          Dir[File.join(ROOT, ".githooks", "*")]
+  FILES = (Dir[File.join(ROOT, "claude", "{hooks,scripts}", "*")] +
+           Dir[File.join(ROOT, ".claude", "hooks", "*")] +
+           Dir[File.join(ROOT, ".githooks", "*")]).reject { |path| File.directory?(path) }
 
   def test_every_hook_and_script_is_executable
     refute_empty FILES
