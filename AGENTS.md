@@ -106,8 +106,8 @@ These are deliberate and are not findings:
 - The four banned words appearing in `claude/hooks/ban-words.rb`, its tests,
   and the README section about it. They are the rule's own subject.
 - Commit metadata: author name and email, the signature, trailers.
-- Hook logs and state files under `~/.claude`, and approval records under
-  `.git/codex-review`.
+- Hook logs and state files under `~/.claude`, and approval records and
+  tidy passes under `~/.local/state/dotagents`.
 
 ## The imagined codebase
 

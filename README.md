@@ -75,7 +75,9 @@ checks only the content staged for the next commit.
 Every commit is reviewed by Codex before it leaves the machine. The
 `/codex-review` project skill sends each unpushed commit, message and patch,
 to Codex against the Reviewing section of `AGENTS.md`, fixes what it finds,
-and records the approval under `.git/codex-review/<sha>`. The pre-push hook
+and records the approval under `~/.local/state/dotagents/codex-review/`
+(`$XDG_STATE_HOME` when set), one folder per repository shared by all its
+worktrees. The pre-push hook
 refuses a push that contains a commit without a record, and the Stop hook in
 `.claude/settings.json` asks for the review when a turn ends with unapproved
 commits. Records are per sha: amending or rebasing a commit means reviewing

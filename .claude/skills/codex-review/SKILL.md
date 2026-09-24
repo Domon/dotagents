@@ -9,7 +9,8 @@ allowed-tools: Bash(codex *), Bash(git *), Bash(rake *), Bash(mktemp *), Bash(gr
 
 Codex reviews each unpushed commit as one unit, its message and its patch,
 against the Reviewing section of AGENTS.md. Approval is recorded per sha
-under `.git/codex-review`; `.githooks/pre-push` refuses a push without it.
+under `~/.local/state/dotagents/codex-review`; `.githooks/pre-push` refuses
+a push without it.
 Amending a commit changes its sha, so an amended commit is reviewed again.
 
 Arguments: a model name starting with `gpt-` overrides the default from

@@ -1,11 +1,17 @@
 # frozen_string_literal: true
 
+require "digest"
 require "json"
 require "fileutils"
 require "open3"
 require "time"
 
 module Dotagents
+  def self.state_dir
+    base = ENV["XDG_STATE_HOME"].to_s
+    File.join(base.empty? ? File.expand_path("~/.local/state") : base, "dotagents")
+  end
+
   def self.deep_merge(base, overrides)
     base.merge(overrides) do |_key, old, new|
       old.is_a?(Hash) && new.is_a?(Hash) ? deep_merge(old, new) : new
@@ -267,20 +273,21 @@ module Dotagents
     ZERO_SHA = /\A0+\z/
 
     def self.for(dir)
-      out, _err, status = Open3.capture3("git", "-C", dir, "rev-parse", "--show-toplevel", "--absolute-git-dir")
+      out, _err, status = Open3.capture3("git", "-C", dir, "rev-parse", "--show-toplevel",
+                                         "--path-format=absolute", "--git-common-dir")
       return nil unless status.success?
 
-      root, git_dir = out.split("\n")
-      new(root: root, git_dir: git_dir)
+      root, common_dir = out.split("\n")
+      new(root: root, common_dir: common_dir)
     end
 
-    def initialize(root:, git_dir:)
+    def initialize(root:, common_dir:)
       @root = root
-      @git_dir = git_dir
+      @common_dir = common_dir
     end
 
     def record_dir
-      File.join(@git_dir, "codex-review")
+      File.join(Dotagents.state_dir, "codex-review", Digest::SHA256.hexdigest(@common_dir)[0, 16])
     end
 
     def approved?(sha)

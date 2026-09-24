@@ -31,6 +31,8 @@ module CodexReviewRepo
 
   def with_repo
     Dir.mktmpdir do |base|
+      previous_state = ENV["XDG_STATE_HOME"]
+      ENV["XDG_STATE_HOME"] = File.join(base, "state")
       origin = File.join(base, "origin.git")
       git!(base, "init", "-q", "--bare", "-b", "main", origin)
       root = File.join(base, "repo")
@@ -42,6 +44,8 @@ module CodexReviewRepo
       commit(root, "base.txt", "base")
       git!(root, "push", "-q", "-u", "origin", "main")
       yield root, Dotagents::CodexReview.for(root)
+    ensure
+      ENV["XDG_STATE_HOME"] = previous_state
     end
   end
 end
@@ -75,10 +79,32 @@ class CodexReviewTest < Minitest::Test
       refute review.approved?(sha)
       review.record!(sha, session: "sess-1")
       assert review.approved?(sha)
-      record = JSON.parse(File.read(File.join(root, ".git", "codex-review", sha)))
+      assert review.record_dir.start_with?(File.join(ENV.fetch("XDG_STATE_HOME"), "dotagents", "codex-review", ""))
+      refute Dir.exist?(File.join(root, ".git", "codex-review"))
+      record = JSON.parse(File.read(File.join(review.record_dir, sha)))
       assert_equal({ "sha" => sha, "subject" => "first", "session" => "sess-1" }, record.slice("sha", "subject", "session"))
       assert_match(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/, record["approved_at"])
     end
+  end
+
+  def test_worktrees_of_one_repository_share_approvals
+    with_repo do |root, review|
+      sha = commit(root, "a.txt", "first")
+      review.record!(sha, session: "s")
+      other = File.join(File.dirname(root), "other")
+      git!(root, "worktree", "add", "-q", "--detach", other, sha)
+      assert Dotagents::CodexReview.for(other).approved?(sha)
+    end
+  end
+
+  def test_state_dir_follows_xdg_state_home
+    previous = ENV["XDG_STATE_HOME"]
+    ENV["XDG_STATE_HOME"] = "/srv/state"
+    assert_equal "/srv/state/dotagents", Dotagents.state_dir
+    ENV["XDG_STATE_HOME"] = ""
+    assert_equal File.expand_path("~/.local/state/dotagents"), Dotagents.state_dir
+  ensure
+    ENV["XDG_STATE_HOME"] = previous
   end
 
   def test_pending_excludes_approved_commits
