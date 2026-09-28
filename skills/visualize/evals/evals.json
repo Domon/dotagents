@@ -1,0 +1,38 @@
+{
+  "skill_name": "visualize",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "evals/files/benchmark-run-lifecycle.md",
+      "expected_output": "The skill triggers without a slash command. The reply opens with one sentence that answers how a benchmark run goes from submitted to a leaderboard score, gives the path of one self-contained HTML page, and describes the page in at most three lines. The page leads with the same answer and shows the run's journey in plain words (submitted, queued, compressed, scored, placed on the leaderboard, with the retry and failure paths). The reply contains no diagram source.",
+      "files": [
+        "evals/files/benchmark-run-lifecycle.md"
+      ],
+      "expectations": [
+        "The visualize skill was loaded without the user typing /visualize",
+        "A single self-contained HTML file was written, and the reply gives its path",
+        "The reply contains no fenced diagram source: no ```mermaid, ```dot or ```plantuml block",
+        "The reply's first sentence answers the question (how a run becomes a leaderboard score), rather than narrating what was built or checked",
+        "The page was rendered to an image and inspected before the reply",
+        "The page's first line states the answer, and its boxes are labelled in words a newcomer would use, such as 'queued' or 'placed on the leaderboard', rather than only class and method names",
+        "No server or browser the run started is still running when it ends"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "evals/files/codec-scores.md",
+      "expected_output": "The skill triggers and routes to a charting skill when one is installed. The reply opens with the finding (middle-out leads on every corpus, lz4-hc trails) and gives the path of one HTML page with a chart whose title states that finding. The reply contains no chart source.",
+      "files": [
+        "evals/files/codec-scores.md"
+      ],
+      "expectations": [
+        "The visualize skill was loaded without the user typing /visualize",
+        "When a charting skill such as dataviz is installed, it was used",
+        "A single self-contained HTML file was written, and the reply gives its path",
+        "The reply's first sentence states the finding: middle-out scores highest on every corpus",
+        "The chart's title states the finding rather than naming the data",
+        "The page was rendered to an image and inspected before the reply"
+      ]
+    }
+  ]
+}
