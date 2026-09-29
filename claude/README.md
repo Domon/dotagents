@@ -100,6 +100,8 @@ main session and inside subagents alike.
   the branch changed Ruby and no whole-branch pass exists on the pushed
   commit or one of its ancestors. The denial names the exact arguments:
   `/tidy <repo> git diff <HEAD sha>` or `/tidy <repo> git diff <base> <tip>`.
+  When the command would add new Ruby files, the denial first asks for a
+  plain `git add` of them, since `git diff` does not show untracked files.
   Generated schema files (`db/schema.rb`, `db/*_schema.rb`), deletes, tags
   and pushes to `main` or `master` are not gated.
 - `hooks/record-tidy-pass.rb` (SubagentStop) records a pass when a fork of

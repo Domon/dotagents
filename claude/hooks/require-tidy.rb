@@ -76,15 +76,17 @@ module RequireTidy
     root = passes.toplevel
     head = git(root, "rev-parse", "--verify", "--quiet", "HEAD") or return
     committing = changed_files(root, *commit_scope(call, root))
-    adding = adds.flat_map { |add| files_staged_by(add, root) }
-    return if ruby_files(committing + adding).empty?
+    new_files = ruby_files(adds.flat_map { |add| untracked_files(add, root) })
+    tracked = adds.flat_map { |add| changed_files(root, "HEAD", "--", *add_paths(add, root)) }
+    return if new_files.empty? && ruby_files(committing + tracked).empty?
     return if passes.pass_since?(head)
 
     parent = git(root, "rev-parse", "--verify", "--quiet", "HEAD^") if call.args.include?("--amend")
     committed_at = git(root, "log", "-1", "--format=%ct", "HEAD").to_i if parent
     return if parent && passes.pass_since?(parent, recorded_after: committed_at)
 
-    "This commit has Ruby that /tidy hasn't reviewed. Run `/tidy #{root} git diff #{parent || head}`, " \
+    staging = "Stage the new files first: `#{Shellwords.join(['git', '-C', root, 'add', *new_files])}`. " unless new_files.empty?
+    "This commit has Ruby that /tidy hasn't reviewed. #{staging}Run `/tidy #{root} git diff #{parent || head}`, " \
       "apply the sketches you accept, then commit again."
   end
 
@@ -158,11 +160,13 @@ module RequireTidy
     [source, (destination || source).to_s.delete_prefix("refs/heads/")]
   end
 
-  def files_staged_by(add, root)
+  def untracked_files(add, root)
+    git_lines(root, "ls-files", "--others", "--exclude-standard", "--", *add_paths(add, root))
+  end
+
+  def add_paths(add, root)
     paths = add.operands.map { |path| relative_path(path, add.dir, root) }
-    paths = ["."] if paths.empty?
-    changed_files(root, "HEAD", "--", *paths) +
-      git_lines(root, "ls-files", "--others", "--exclude-standard", "--", *paths)
+    paths.empty? ? ["."] : paths
   end
 
   def changed_files(root, *scope)

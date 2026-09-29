@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "shellwords"
 require_relative "tidy_repo_helper"
 
 class RequireTidyTest < Minitest::Test
@@ -34,6 +35,32 @@ class RequireTidyTest < Minitest::Test
       refute_nil gate("git add app/models/codec.rb && git commit -m 'Add codec'", root)
       refute_nil gate("git add -A && git commit -m 'Add codec'", root)
       refute_nil gate("git add . && git commit -m 'Add codec'", root)
+    end
+  end
+
+  def test_denial_asks_to_stage_new_ruby_files_before_tidy
+    with_repo do |root|
+      write(root, "app/models/codec.rb")
+      reason = gate("git add app/models/codec.rb && git commit -m 'Add codec'", root)
+      assert_includes reason, "Stage the new files first: `git -C #{root} add app/models/codec.rb`"
+      assert_operator reason.index("add app/models/codec.rb"), :<, reason.index("/tidy #{root}")
+    end
+  end
+
+  def test_staging_hint_works_from_a_subdirectory_and_escapes_paths
+    with_repo("middle out") do |root|
+      write(root, "app/models/weissman score.rb")
+      FileUtils.mkdir_p(File.join(root, "app"))
+      reason = gate("git add 'models/weissman score.rb' && git commit -m 'Add score'", File.join(root, "app"))
+      assert_includes reason, Shellwords.join(["git", "-C", root, "add", "app/models/weissman score.rb"])
+    end
+  end
+
+  def test_tracked_changes_need_no_staging_step
+    with_repo do |root|
+      commit(root, "app/models/codec.rb")
+      write(root, "app/models/codec.rb", "changed\n")
+      refute_includes gate("git add app/models/codec.rb && git commit -m 'Change codec'", root), "Stage the new files"
     end
   end
 
