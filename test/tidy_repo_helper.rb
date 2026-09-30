@@ -59,6 +59,11 @@ module TidyRepo
     end
   end
 
+  def events
+    path = TidyPasses.events_path
+    File.exist?(path) ? File.readlines(path).map { |line| JSON.parse(line).except("at") } : []
+  end
+
   def run_hook(name, input)
     stdin = input.is_a?(String) ? input : JSON.generate(input)
     out, err, status = Open3.capture3(RbConfig.ruby, File.join(ROOT, "claude", "hooks", name), stdin_data: stdin)

@@ -111,5 +111,14 @@ main session and inside subagents alike.
 
 Passes live in `~/.local/state/dotagents/tidy/<worktree key>/`
 (`$XDG_STATE_HOME` when set), one folder per worktree, managed by
-`hooks/lib/tidy_passes.rb`. Hook errors never block and are logged to
-`hook.log` in `~/.local/state/dotagents/tidy/`.
+`hooks/lib/tidy_passes.rb`.
+
+Both hooks append one JSON line per event to
+`~/.local/state/dotagents/tidy/events.jsonl`, with the time, session id,
+subagent id and repository: `deny` and `allow` for a gated commit or push
+(allowed commands that needed no pass are not logged), `record` for a pass,
+`skip` with the reason when a tidy fork finished without recording one, and
+`error` when a hook failed; errors never block. `rake tidy:report` summarises
+the last seven days (`DAYS=` to change): counts, the median time from a denial
+to its release, a row per repository, every denial never released in its
+session, skips by reason, and recent errors.

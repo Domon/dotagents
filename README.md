@@ -62,6 +62,7 @@ rake install
 rake test            # the whole suite
 rake audit           # every file, against .audit-terms plus path and email checks
 rake settings:diff   # what settings:overrides would change
+rake tidy:report     # what the tidy gates did in the last DAYS (default 7)
 ```
 
 `rake audit` fails when any file contains a term from `.audit-terms`, an

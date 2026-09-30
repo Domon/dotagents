@@ -58,8 +58,17 @@ class TidyPassesTest < Minitest::Test
     end
   end
 
-  def test_log_appends_a_line
-    TidyPasses.log("record-tidy-pass RuntimeError: boom")
-    assert_match(/Z record-tidy-pass RuntimeError: boom\n\z/, File.read(File.join(TidyPasses.state_dir, "hook.log")))
+  def test_event_appends_one_json_line
+    TidyPasses.log_event("deny", "kind" => "commit", "session_id" => "s1")
+    TidyPasses.log_error("record-tidy-pass", RuntimeError.new("boom"))
+    first, second = File.readlines(TidyPasses.events_path).map { |line| JSON.parse(line) }
+    assert_equal({ "event" => "deny", "kind" => "commit", "session_id" => "s1" }, first.except("at"))
+    assert_match(/\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\z/, first["at"])
+    assert_equal "error", second["event"]
+  end
+
+  def test_event_drops_empty_fields
+    TidyPasses.log_event("allow", "kind" => "push", "agent_id" => nil)
+    refute JSON.parse(File.read(TidyPasses.events_path)).key?("agent_id")
   end
 end

@@ -9,24 +9,30 @@ module RecordTidyPass
   SKILL_LINE = %r{\ABase directory for this skill: .*/skills/tidy/?\z}
   REVIEW_LINE = /^Review: (.+)$/
   GIT_DIFF = /\A(?<path>.+?) git diff (?<base>\h{40})(?: (?<tip>\h{40}))?\z/
-  SECTIONS = ["Removals:", "Out of scope"].freeze
+  SECTIONS = [/^\W*Removals\b/i, /^\W*Out of scope\b/i].freeze
 
   module_function
 
   def run(input)
-    return unless SECTIONS.all? { |section| input["last_assistant_message"].to_s.include?(section) }
-
     prompt = first_prompt(input["agent_transcript_path"]).to_s
     return unless prompt.lines.first.to_s.chomp.match?(SKILL_LINE)
 
+    ids = input.slice("session_id", "agent_id")
     args = prompt[REVIEW_LINE, 1].to_s.strip
-    match = GIT_DIFF.match(args) or return
-    path = File.expand_path(match[:path].gsub(/\A["']|["']\z/, ""))
-    passes = TidyPasses.for(path) or return
-    return unless passes.toplevel == File.realpath(path)
+    message = input["last_assistant_message"].to_s
+    return log_skip("missing sections", args, ids) unless SECTIONS.all? { |section| message.match?(section) }
 
-    passes.record(match[:base], match[:tip], "args" => args, "session_id" => input["session_id"],
-                                            "agent_id" => input["agent_id"], "recorded_at" => Time.now.utc.iso8601)
+    match = GIT_DIFF.match(args) or return log_skip("not a git diff", args, ids)
+    path = File.expand_path(match[:path].gsub(/\A["']|["']\z/, ""))
+    passes = TidyPasses.for(path)
+    return log_skip("not the top level", args, ids) unless passes && passes.toplevel == File.realpath(path)
+
+    passes.record(match[:base], match[:tip], { "args" => args, "recorded_at" => Time.now.utc.iso8601 }.merge(ids))
+    TidyPasses.log_event("record", { "repo" => passes.toplevel, "base" => match[:base], "tip" => match[:tip] }.merge(ids))
+  end
+
+  def log_skip(reason, args, ids)
+    TidyPasses.log_event("skip", { "reason" => reason, "args" => args }.merge(ids))
   end
 
   def first_prompt(path)
@@ -49,7 +55,7 @@ if $PROGRAM_NAME == __FILE__
   begin
     RecordTidyPass.run(JSON.parse($stdin.read))
   rescue StandardError => e
-    TidyPasses.log("record-tidy-pass #{e.class}: #{e.message}")
+    TidyPasses.log_error("record-tidy-pass", e)
   end
   exit 0
 end

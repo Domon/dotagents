@@ -2,6 +2,7 @@
 
 require "rake/testtask"
 require_relative "lib/dotagents"
+require_relative "claude/hooks/lib/tidy_passes"
 
 CLAUDE_HOME = File.expand_path("~/.claude")
 
@@ -90,5 +91,12 @@ namespace :review do
       review.record!(sha, session: session)
       puts "approved #{sha[0, 7]} #{review.subject(sha)}"
     end
+  end
+end
+
+namespace :tidy do
+  desc "Summarise the tidy gates' events: denials, releases, passes, skips, errors; DAYS=7 by default"
+  task :report do
+    print Dotagents::TidyReport.read(TidyPasses.events_path, days: Integer(ENV.fetch("DAYS", "7")))
   end
 end

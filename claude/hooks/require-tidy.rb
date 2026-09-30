@@ -24,21 +24,34 @@ module RequireTidy
     def operands = args.reject { |arg| arg.start_with?("-") }
   end
 
+  Verdict = Struct.new(:kind, :repo, :sha, :tidy_command, :message) do
+    def deny? = !message.nil?
+
+    def log(ids)
+      TidyPasses.log_event(deny? ? "deny" : "allow",
+                           { "kind" => kind, "repo" => repo, "sha" => sha, "tidy_command" => tidy_command }.merge(ids))
+    end
+  end
+
   module_function
 
-  def reason(command, cwd)
-    return nil unless command.include?("git")
+  def verdicts(command, cwd)
+    return [] unless command.include?("git")
 
     adds = []
+    found = []
     git_calls(command, cwd).each do |call|
       adds << call if call.subcommand == "add"
-      found = case call.subcommand
-              when "commit" then commit_reason(call, adds)
-              when "push" then push_reason(call)
-              end
-      return found if found
+      verdict = case call.subcommand
+                when "commit" then commit_verdict(call, adds)
+                when "push" then push_verdict(call)
+                end
+      next unless verdict
+
+      found << verdict
+      break if verdict.deny?
     end
-    nil
+    found
   end
 
   def git_calls(command, cwd)
@@ -71,7 +84,7 @@ module RequireTidy
     GitCall.new(dir, words.first, words.drop(1))
   end
 
-  def commit_reason(call, adds)
+  def commit_verdict(call, adds)
     passes = TidyPasses.for(call.dir) or return
     root = passes.toplevel
     head = git(root, "rev-parse", "--verify", "--quiet", "HEAD") or return
@@ -79,15 +92,19 @@ module RequireTidy
     new_files = ruby_files(adds.flat_map { |add| untracked_files(add, root) })
     tracked = adds.flat_map { |add| changed_files(root, "HEAD", "--", *add_paths(add, root)) }
     return if new_files.empty? && ruby_files(committing + tracked).empty?
-    return if passes.pass_since?(head)
+
+    allowed = Verdict.new(kind: "commit", repo: root, sha: head)
+    return allowed if passes.pass_since?(head)
 
     parent = git(root, "rev-parse", "--verify", "--quiet", "HEAD^") if call.args.include?("--amend")
     committed_at = git(root, "log", "-1", "--format=%ct", "HEAD").to_i if parent
-    return if parent && passes.pass_since?(parent, recorded_after: committed_at)
+    return allowed if parent && passes.pass_since?(parent, recorded_after: committed_at)
 
+    tidy_command = "/tidy #{root} git diff #{parent || head}"
     staging = "Stage the new files first: `#{Shellwords.join(['git', '-C', root, 'add', *new_files])}`. " unless new_files.empty?
-    "This commit has Ruby that /tidy hasn't reviewed. #{staging}Run `/tidy #{root} git diff #{parent || head}`, " \
-      "apply the sketches you accept, then commit again."
+    Verdict.new(kind: "commit", repo: root, sha: head, tidy_command:,
+                message: "This commit has Ruby that /tidy hasn't reviewed. #{staging}" \
+                         "Run `#{tidy_command}`, apply the sketches you accept, then commit again.")
   end
 
   def commit_scope(call, root)
@@ -133,7 +150,7 @@ module RequireTidy
     Pathname.new(File.realpath(full)).relative_path_from(Pathname.new(root)).to_s
   end
 
-  def push_reason(call)
+  def push_verdict(call)
     return if call.args.any? { |arg| UNGATED_PUSHES.include?(arg) }
 
     passes = TidyPasses.for(call.dir) or return
@@ -145,10 +162,13 @@ module RequireTidy
     base_ref = BASE_REFS.find { |ref| git(root, "rev-parse", "--verify", "--quiet", ref) } or return
     base = git(root, "merge-base", base_ref, tip) or return
     return if ruby_files(git_lines(root, "diff", "--name-only", base, tip)).empty?
-    return if passes.branch_tips(base).any? { |pass_tip| pass_tip == tip || ancestor?(root, pass_tip, tip) }
+    reviewed = passes.branch_tips(base).any? { |pass_tip| pass_tip == tip || ancestor?(root, pass_tip, tip) }
+    return Verdict.new(kind: "push", repo: root, sha: tip) if reviewed
 
-    "Pushing #{destination} needs a whole-branch /tidy pass. Run `/tidy #{root} git diff #{base} #{tip}`, " \
-      "apply the sketches you accept, commit, then push again."
+    tidy_command = "/tidy #{root} git diff #{base} #{tip}"
+    Verdict.new(kind: "push", repo: root, sha: tip, tidy_command:,
+                message: "Pushing #{destination} needs a whole-branch /tidy pass. Run `#{tidy_command}`, " \
+                         "apply the sketches you accept, commit, then push again.")
   end
 
   def push_refs(call, root)
@@ -199,10 +219,12 @@ end
 if $PROGRAM_NAME == __FILE__
   begin
     input = JSON.parse($stdin.read)
-    found = RequireTidy.reason(input.dig("tool_input", "command").to_s, input["cwd"].to_s)
-    puts RequireTidy.deny(found) if found
+    verdicts = RequireTidy.verdicts(input.dig("tool_input", "command").to_s, input["cwd"].to_s)
+    verdicts.each { |verdict| verdict.log(input.slice("session_id", "agent_id")) }
+    denial = verdicts.find(&:deny?)
+    puts RequireTidy.deny(denial.message) if denial
   rescue StandardError => e
-    TidyPasses.log("require-tidy #{e.class}: #{e.message}")
+    TidyPasses.log_error("require-tidy", e)
   end
   exit 0
 end

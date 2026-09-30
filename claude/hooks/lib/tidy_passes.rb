@@ -19,9 +19,18 @@ class TidyPasses
     status.success? ? new(File.realpath(out.chomp)) : nil
   end
 
-  def self.log(message)
+  def self.events_path
+    File.join(state_dir, "events.jsonl")
+  end
+
+  def self.log_error(hook, exception)
+    log_event("error", "hook" => hook, "message" => "#{exception.class}: #{exception.message}")
+  end
+
+  def self.log_event(name, fields = {})
     FileUtils.mkdir_p(state_dir)
-    File.open(File.join(state_dir, "hook.log"), "a") { |file| file.puts("#{Time.now.utc.iso8601} #{message}") }
+    line = JSON.generate({ "at" => Time.now.utc.iso8601, "event" => name }.merge(fields.compact))
+    File.open(events_path, "a") { |file| file.puts(line) }
     nil
   rescue SystemCallError
     nil

@@ -29,6 +29,52 @@ class RequireTidyTest < Minitest::Test
     end
   end
 
+  def test_a_denial_is_logged_with_its_session_and_arguments
+    with_repo do |root|
+      stage(root, "app/models/codec.rb")
+      gate("git commit -m 'Add codec'", root, "session_id" => "s1", "agent_id" => "a1")
+      assert_equal [{ "event" => "deny", "kind" => "commit", "repo" => root, "sha" => head(root),
+                      "tidy_command" => "/tidy #{root} git diff #{head(root)}", "session_id" => "s1", "agent_id" => "a1" }],
+                   events
+    end
+  end
+
+  def test_a_commit_allowed_by_a_pass_is_logged
+    with_repo do |root|
+      stage(root, "app/models/codec.rb")
+      TidyPasses.for(root).record(head(root))
+      gate("git commit -m 'Add codec'", root, "session_id" => "s1")
+      assert_equal [{ "event" => "allow", "kind" => "commit", "repo" => root, "sha" => head(root),
+                      "session_id" => "s1" }], events
+    end
+  end
+
+  def test_a_push_denial_is_logged_with_both_shas
+    with_repo do |root|
+      base = head(root)
+      git!(root, "checkout", "-q", "-b", "codec-picker")
+      tip = commit(root, "app/models/codec.rb")
+      gate("git push -u origin codec-picker", root, "session_id" => "s1")
+      assert_equal [%w[deny push], "/tidy #{root} git diff #{base} #{tip}", tip],
+                   [events.last.values_at("event", "kind"), events.last["tidy_command"], events.last["sha"]]
+    end
+  end
+
+  def test_ungated_commands_log_nothing
+    with_repo do |root|
+      stage(root, "docs/benchmarks.md")
+      gate("ls -la", root)
+      gate("git status", root)
+      gate("git commit -m 'Document benchmarks'", root)
+      assert_empty events
+    end
+  end
+
+  def test_a_hook_error_is_logged
+    run_hook("require-tidy.rb", "not json")
+    assert_equal({ "event" => "error", "hook" => "require-tidy" }, events.last.slice("event", "hook"))
+  end
+
   def test_add_and_commit_in_one_command_is_gated
     with_repo do |root|
       write(root, "app/models/codec.rb")

@@ -364,4 +364,127 @@ module Dotagents
       status.success? ? out : nil
     end
   end
+
+  class TidyReport
+    DAY = 86_400
+
+    def self.read(path, days:, now: Time.now, home: Dir.home)
+      lines = File.exist?(path) ? File.readlines(path) : []
+      events = lines.filter_map do |line|
+        JSON.parse(line)
+      rescue JSON::ParserError
+        nil
+      end
+      new(events, since: now - (days * DAY), home:)
+    end
+
+    def initialize(events, since:, home:)
+      @since = since
+      @home = home
+      @events = events.filter_map { |event| timed(event) }.select { |event| event["time"] >= since }
+                      .sort_by { |event| event["time"] }
+    end
+
+    def to_s
+      since = @since.getlocal.strftime("%Y-%m-%d")
+      return "No tidy gate events since #{since}.\n" if @events.empty?
+
+      sections = [summary, repositories, unresolved, skips, errors].compact
+      "Tidy gates since #{since}\n\n#{sections.join("\n\n")}\n"
+    end
+
+    private
+
+    def timed(event)
+      return nil unless event.is_a?(Hash)
+
+      event.merge("time" => Time.iso8601(event["at"].to_s))
+    rescue ArgumentError
+      nil
+    end
+
+    def named(name)
+      @events.select { |event| event["event"] == name }
+    end
+
+    def resolutions
+      @resolutions ||= named("deny").map { |denial| [denial, release_of(denial)] }
+    end
+
+    def release_of(denial)
+      key = denial.values_at("session_id", "repo", "kind")
+      named("allow").find { |release| release["time"] > denial["time"] && release.values_at("session_id", "repo", "kind") == key }
+    end
+
+    def summary
+      released = resolutions.count { |_denial, release| release }
+      parts = ["#{resolutions.size} denied", "#{released} released", "#{resolutions.size - released} unresolved",
+               "#{plural(named('record').size, 'pass', 'passes')} recorded", "#{named('skip').size} skipped",
+               plural(named("error").size, "error", "errors")]
+      delays = resolutions.filter_map { |denial, release| release && (release["time"] - denial["time"]) }
+      lines = ["  #{parts.join(' · ')}"]
+      lines << "  denial to release: median #{duration(median(delays))}" unless delays.empty?
+      lines.join("\n")
+    end
+
+    def repositories
+      repos = @events.filter_map { |event| event["repo"] }.uniq.sort
+      return nil if repos.empty?
+
+      width = repos.map { |repo| tilde_home(repo).length }.max + 3
+      rows = repos.map do |repo|
+        denials = resolutions.select { |denial, _release| denial["repo"] == repo }
+        released = denials.count { |_denial, release| release }
+        passes = named("record").count { |event| event["repo"] == repo }
+        "  #{tilde_home(repo).ljust(width)}#{denials.size} denied  #{released} released  #{plural(passes, 'pass', 'passes')}"
+      end
+      section("By repository", rows)
+    end
+
+    def unresolved
+      rows = resolutions.filter_map do |denial, release|
+        next if release
+
+        who = ["session #{denial['session_id']}", ("agent #{denial['agent_id']}" if denial["agent_id"])].compact
+        "  #{denial['time'].getlocal.strftime('%Y-%m-%d %H:%M')}  #{tilde_home(denial['repo'])}  #{denial['kind']}  " \
+          "#{who.join('  ')}\n    #{tilde_home(denial['tidy_command'])}"
+      end
+      section("Unresolved denials", rows)
+    end
+
+    def skips
+      by_reason = named("skip").group_by { |event| event["reason"] }
+      section("Skipped tidy forks", by_reason.map { |reason, events| "  #{reason}  #{events.size}" })
+    end
+
+    def errors
+      section("Errors", named("error").last(5).map { |event| "  #{event['hook']}  #{event['message']}" })
+    end
+
+    def section(title, rows)
+      "#{title}\n#{rows.join("\n")}" unless rows.empty?
+    end
+
+    def tilde_home(path)
+      path.to_s.gsub("#{@home}/", "~/")
+    end
+
+    def plural(count, one, many)
+      "#{count} #{count == 1 ? one : many}"
+    end
+
+    def median(values)
+      sorted = values.sort
+      middle = sorted.size / 2
+      sorted.size.odd? ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2.0
+    end
+
+    def duration(seconds)
+      seconds = seconds.round
+      return "#{seconds}s" if seconds < 60
+      return "#{seconds / 60}m #{seconds % 60}s" if seconds < 3600
+
+      "#{seconds / 3600}h #{seconds % 3600 / 60}m"
+    end
+  end
 end

@@ -31,6 +31,53 @@ class RecordTidyPassTest < Minitest::Test
     Dir.exist?(dir) ? Dir.children(dir) : []
   end
 
+  def test_closing_sections_may_be_headings
+    with_repo do |root|
+      head = git!(root, "rev-parse", "HEAD")
+      output = "# Tidy pass\n\n## Removals\n- `lines`\n\n## Out of scope — flag separately\n- none\n"
+      stop(transcript(tidy_prompt("#{root} git diff #{head}")), output)
+      assert TidyPasses.for(root).pass_since?(head)
+    end
+  end
+
+  def test_logs_a_record_event
+    with_repo do |root|
+      base = git!(root, "rev-parse", "HEAD")
+      tip = commit(root, "app/models/codec.rb")
+      stop(transcript(tidy_prompt("#{root} git diff #{base} #{tip}")))
+      assert_equal [{ "event" => "record", "repo" => root, "base" => base, "tip" => tip,
+                      "session_id" => "s1", "agent_id" => "a1" }], events
+    end
+  end
+
+  def test_logs_why_a_tidy_fork_recorded_nothing
+    with_repo do |root|
+      head = git!(root, "rev-parse", "HEAD")
+      FileUtils.mkdir_p(File.join(root, "app"))
+      stop(transcript(tidy_prompt("#{root} git diff #{head}")), "I need permission to use Bash.")
+      stop(transcript(tidy_prompt("#{root} app/models/codec.rb")))
+      stop(transcript(tidy_prompt("#{root}/app git diff #{head}")))
+      assert_equal [["skip", "missing sections"], ["skip", "not a git diff"], ["skip", "not the top level"]],
+                   events.map { |event| event.values_at("event", "reason") }
+      assert(events.all? { |event| event["session_id"] == "s1" && event["agent_id"] == "a1" })
+    end
+  end
+
+  def test_logs_nothing_for_another_skill
+    with_repo do |root|
+      head = git!(root, "rev-parse", "HEAD")
+      stop(transcript(tidy_prompt("#{root} git diff #{head}", "/opt/agents/skills/humane-review")))
+      assert_empty events
+    end
+  end
+
+  def test_logs_an_error_event
+    File.write(File.join(@state, "broken.jsonl"), "not json\n")
+    stop(File.join(@state, "broken.jsonl"))
+    assert_equal "error", events.last["event"]
+    assert_equal "record-tidy-pass", events.last["hook"]
+  end
+
   def test_records_a_commit_pass_from_the_arguments
     with_repo do |root|
       head = git!(root, "rev-parse", "HEAD")
