@@ -31,6 +31,30 @@ class RecordTidyPassTest < Minitest::Test
     Dir.exist?(dir) ? Dir.children(dir) : []
   end
 
+  def test_stray_punctuation_around_the_arguments_is_ignored
+    with_repo do |root|
+      base = git!(root, "rev-parse", "HEAD")
+      tip = commit(root, "app/models/codec.rb")
+      stop(transcript(tidy_prompt("#{root} git diff #{base} #{tip} —")))
+      stop(transcript(tidy_prompt("`#{root} git diff #{tip}`.")))
+      passes = TidyPasses.for(root)
+      assert_equal [tip], passes.branch_tips(base)
+      assert passes.pass_since?(tip)
+    end
+  end
+
+  def test_revision_suffixes_are_not_punctuation
+    with_repo do |root|
+      base = git!(root, "rev-parse", "HEAD")
+      tip = commit(root, "app/models/codec.rb")
+      stop(transcript(tidy_prompt("#{root} git diff #{base} #{tip}^")))
+      stop(transcript(tidy_prompt("#{root} git diff #{base} #{tip}~")))
+      stop(transcript(tidy_prompt("#{root} git diff #{tip}..")))
+      stop(transcript(tidy_prompt("#{root} git diff #{tip}...")))
+      assert_empty passes_in(root)
+    end
+  end
+
   def test_closing_sections_may_be_headings
     with_repo do |root|
       head = git!(root, "rev-parse", "HEAD")

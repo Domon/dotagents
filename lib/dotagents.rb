@@ -368,13 +368,7 @@ module Dotagents
   class TidyReport
     DAY = 86_400
 
-    def self.read(path, days:, now: Time.now, home: Dir.home)
-      lines = File.exist?(path) ? File.readlines(path) : []
-      events = lines.filter_map do |line|
-        JSON.parse(line)
-      rescue JSON::ParserError
-        nil
-      end
+    def self.covering(events, days:, now: Time.now, home: Dir.home)
       new(events, since: now - (days * DAY), home:)
     end
 

@@ -60,18 +60,10 @@ class TidyReportTest < Minitest::Test
     assert_includes report([]), "No tidy gate events"
   end
 
-  def test_read_keeps_only_the_window_and_ignores_broken_lines
-    Dir.mktmpdir do |dir|
-      path = File.join(dir, "events.jsonl")
-      File.write(path, [JSON.generate(deny(60 * 24 * 10, session: "old")), "not json",
-                        "5", "[1]", JSON.generate(deny(30, session: "new"))].join("\n") + "\n")
-      text = Dotagents::TidyReport.read(path, days: 7, now: NOW, home: HOME).to_s
-      assert_includes text, "session new"
-      refute_includes text, "session old"
-    end
-  end
-
-  def test_read_without_a_log_is_empty
-    assert_includes Dotagents::TidyReport.read("/nonexistent/events.jsonl", days: 7, now: NOW).to_s, "No tidy gate events"
+  def test_covering_keeps_only_the_window_and_ignores_events_that_are_not_objects
+    events = [deny(60 * 24 * 10, session: "old"), 5, [1], { "event" => "deny" }, deny(30, session: "new")]
+    text = Dotagents::TidyReport.covering(events, days: 7, now: NOW, home: HOME).to_s
+    assert_includes text, "session new"
+    refute_includes text, "session old"
   end
 end

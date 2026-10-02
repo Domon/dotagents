@@ -39,6 +39,46 @@ class RequireTidyTest < Minitest::Test
     end
   end
 
+  def test_a_denial_explains_why_the_last_tidy_run_did_not_count
+    with_repo do |root|
+      stage(root, "app/models/codec.rb")
+      narrowed = "#{root} git diff --cached #{head(root)} -- app/models"
+      TidyPasses.log_event("skip", "reason" => "not a git diff", "args" => narrowed, "session_id" => "s1")
+      reason = gate("git commit -m 'Add codec'", root, "session_id" => "s1")
+      assert_includes reason, "Your last /tidy run here did not count (not a git diff): it was given `#{narrowed}`."
+      assert_operator reason.index("/tidy #{root} git diff #{head(root)}`"), :<, reason.index("did not count")
+      refute_includes gate("git commit -m 'Add codec'", root, "session_id" => "s2"), "did not count"
+    end
+  end
+
+  def test_a_push_denial_explains_a_skipped_run_too
+    with_repo do |root|
+      git!(root, "checkout", "-q", "-b", "codec-picker")
+      commit(root, "app/models/codec.rb")
+      TidyPasses.log_event("skip", "reason" => "missing sections", "args" => "#{root} git diff x", "session_id" => "s1")
+      reason = gate("git push -u origin codec-picker", root, "session_id" => "s1")
+      assert_includes reason, "did not count: it ended without its Removals and Out of scope sections."
+      refute_includes reason, "git diff x"
+    end
+  end
+
+  def test_a_damaged_event_log_does_not_lift_a_denial
+    with_repo do |root|
+      stage(root, "app/models/codec.rb")
+      FileUtils.mkdir_p(TidyPasses.state_dir)
+      File.write(TidyPasses.events_path, "5\n[1]\nnot json\n")
+      refute_nil gate("git commit -m 'Add codec'", root, "session_id" => "s1")
+    end
+  end
+
+  def test_quoted_arguments_lose_their_backticks
+    with_repo do |root|
+      stage(root, "app/models/codec.rb")
+      TidyPasses.log_event("skip", "reason" => "not a git diff", "args" => "`#{root} git diff HEAD`", "session_id" => "s1")
+      assert_includes gate("git commit -m 'Add codec'", root, "session_id" => "s1"), "it was given `#{root} git diff HEAD`."
+    end
+  end
+
   def test_a_commit_allowed_by_a_pass_is_logged
     with_repo do |root|
       stage(root, "app/models/codec.rb")

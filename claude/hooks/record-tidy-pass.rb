@@ -8,7 +8,9 @@ require File.join(File.dirname(File.realpath(__FILE__)), "lib", "tidy_passes")
 module RecordTidyPass
   SKILL_LINE = %r{\ABase directory for this skill: .*/skills/tidy/?\z}
   REVIEW_LINE = /^Review: (.+)$/
-  GIT_DIFF = /\A(?<path>.+?) git diff (?<base>\h{40})(?: (?<tip>\h{40}))?\z/
+  TRAILING = %r{[\s`'"—–\-,;:)]*}
+  # At most one full stop: `..`, `...`, ^ and ~ after a sha name a different revision range.
+  GIT_DIFF = /\A`*(?<path>.+?) git diff (?<base>\h{40})(?: (?<tip>\h{40}))?#{TRAILING}\.?#{TRAILING}\z/
   SECTIONS = [/^\W*Removals\b/i, /^\W*Out of scope\b/i].freeze
 
   module_function
@@ -20,7 +22,7 @@ module RecordTidyPass
     ids = input.slice("session_id", "agent_id")
     args = prompt[REVIEW_LINE, 1].to_s.strip
     message = input["last_assistant_message"].to_s
-    return log_skip("missing sections", args, ids) unless SECTIONS.all? { |section| message.match?(section) }
+    return log_skip(TidyPasses::MISSING_SECTIONS, args, ids) unless SECTIONS.all? { |section| message.match?(section) }
 
     match = GIT_DIFF.match(args) or return log_skip("not a git diff", args, ids)
     path = File.expand_path(match[:path].gsub(/\A["']|["']\z/, ""))

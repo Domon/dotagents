@@ -67,6 +67,39 @@ class TidyPassesTest < Minitest::Test
     assert_equal "error", second["event"]
   end
 
+  def test_events_is_empty_without_a_log
+    assert_empty TidyPasses.events
+  end
+
+  def test_skip_since_last_pass_finds_the_latest_skip_for_this_session_and_repository
+    repo = "/srv/pied-piper/middle-out"
+    TidyPasses.log_event("skip", "reason" => "not a git diff", "args" => "#{repo} git diff HEAD", "session_id" => "s1")
+    TidyPasses.log_event("skip", "reason" => "missing sections", "args" => "#{repo} git diff #{'a' * 40}", "session_id" => "s1")
+    TidyPasses.log_event("skip", "reason" => "not a git diff", "args" => "#{repo} git diff HEAD", "session_id" => "s2")
+    TidyPasses.log_event("skip", "reason" => "not a git diff", "args" => "/srv/elsewhere git diff HEAD", "session_id" => "s1")
+    assert_equal "missing sections", TidyPasses.skip_since_last_pass("s1", repo)["reason"]
+    assert_nil TidyPasses.skip_since_last_pass("s3", repo)
+  end
+
+  def test_a_later_pass_clears_the_skip
+    repo = "/srv/pied-piper/middle-out"
+    TidyPasses.log_event("skip", "reason" => "not a git diff", "args" => "#{repo} git diff HEAD", "session_id" => "s1")
+    TidyPasses.log_event("record", "repo" => repo, "base" => "a" * 40, "session_id" => "s1")
+    assert_nil TidyPasses.skip_since_last_pass("s1", repo)
+  end
+
+  def test_no_session_means_no_skip
+    TidyPasses.log_event("skip", "reason" => "not a git diff", "args" => "/srv/x git diff HEAD")
+    assert_nil TidyPasses.skip_since_last_pass(nil, "/srv/x")
+  end
+
+  def test_events_skips_broken_lines
+    TidyPasses.log_event("record", "repo" => "/srv/x")
+    File.open(TidyPasses.events_path, "a") { |file| file.puts("not json", "5", "[1]") }
+    TidyPasses.log_event("skip", "reason" => "not a git diff", "args" => "/srv/x git diff HEAD", "session_id" => "s1")
+    assert_equal %w[record skip], TidyPasses.events.map { |event| event["event"] }
+  end
+
   def test_event_drops_empty_fields
     TidyPasses.log_event("allow", "kind" => "push", "agent_id" => nil)
     refute JSON.parse(File.read(TidyPasses.events_path)).key?("agent_id")

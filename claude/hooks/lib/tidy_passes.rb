@@ -7,6 +7,8 @@ require "open3"
 require "time"
 
 class TidyPasses
+  MISSING_SECTIONS = "missing sections"
+
   def self.state_dir
     base = ENV["XDG_STATE_HOME"].to_s
     File.join(base.empty? ? File.expand_path("~/.local/state") : base, "dotagents", "tidy")
@@ -21,6 +23,28 @@ class TidyPasses
 
   def self.events_path
     File.join(state_dir, "events.jsonl")
+  end
+
+  def self.events
+    parsed = File.readlines(events_path).filter_map do |line|
+      JSON.parse(line)
+    rescue JSON::ParserError
+      nil
+    end
+    parsed.grep(Hash)
+  rescue SystemCallError
+    []
+  end
+
+  def self.skip_since_last_pass(session_id, repo)
+    return nil unless session_id
+
+    events.reverse_each do |event|
+      next unless event["session_id"] == session_id
+      return nil if event["event"] == "record" && event["repo"] == repo
+      return event if event["event"] == "skip" && event["args"].include?(repo)
+    end
+    nil
   end
 
   def self.log_error(hook, exception)

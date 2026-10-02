@@ -97,6 +97,6 @@ end
 namespace :tidy do
   desc "Summarise the tidy gates' events: denials, releases, passes, skips, errors; DAYS=7 by default"
   task :report do
-    print Dotagents::TidyReport.read(TidyPasses.events_path, days: Integer(ENV.fetch("DAYS", "7")))
+    print Dotagents::TidyReport.covering(TidyPasses.events, days: Integer(ENV.fetch("DAYS", "7")))
   end
 end

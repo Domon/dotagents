@@ -210,6 +210,17 @@ module RequireTidy
     status.success? ? out.chomp : nil
   end
 
+  def skip_note(session_id, repo)
+    skip = TidyPasses.skip_since_last_pass(session_id, repo) or return
+    opening = "Your last /tidy run here did not count"
+    return "#{opening}: it ended without its Removals and Out of scope sections." if skip["reason"] == TidyPasses::MISSING_SECTIONS
+
+    "#{opening} (#{skip['reason']}): it was given `#{skip['args'].delete('`')}`."
+  # A failing note must not cost the caller its denial.
+  rescue StandardError
+    nil
+  end
+
   def deny(reason)
     JSON.generate("hookSpecificOutput" => { "hookEventName" => "PreToolUse", "permissionDecision" => "deny",
                                             "permissionDecisionReason" => reason })
@@ -222,7 +233,10 @@ if $PROGRAM_NAME == __FILE__
     verdicts = RequireTidy.verdicts(input.dig("tool_input", "command").to_s, input["cwd"].to_s)
     verdicts.each { |verdict| verdict.log(input.slice("session_id", "agent_id")) }
     denial = verdicts.find(&:deny?)
-    puts RequireTidy.deny(denial.message) if denial
+    if denial
+      reason = [denial.message, RequireTidy.skip_note(input["session_id"], denial.repo)].compact.join(" ")
+      puts RequireTidy.deny(reason)
+    end
   rescue StandardError => e
     TidyPasses.log_error("require-tidy", e)
   end
