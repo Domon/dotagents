@@ -158,7 +158,7 @@ module RequireTidy
     source, destination = push_refs(call, root)
     return if source.nil? || TRUNKS.include?(destination)
 
-    tip = git(root, "rev-parse", "--verify", "--quiet", "#{source}^{commit}") or return
+    tip = passes.commit_sha(source) or return
     base_ref = BASE_REFS.find { |ref| git(root, "rev-parse", "--verify", "--quiet", ref) } or return
     base = git(root, "merge-base", base_ref, tip) or return
     return if ruby_files(git_lines(root, "diff", "--name-only", base, tip)).empty?

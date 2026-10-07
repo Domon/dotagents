@@ -43,6 +43,29 @@ class RecordTidyPassTest < Minitest::Test
     end
   end
 
+  def test_shortened_shas_are_recorded_in_full
+    with_repo do |root|
+      base = git!(root, "rev-parse", "HEAD")
+      tip = commit(root, "app/models/codec.rb")
+      stop(transcript(tidy_prompt("#{root} git diff #{base[0, 10]} #{tip[0, 7]}")))
+      stop(transcript(tidy_prompt("#{root} git diff #{tip[0, 12]}")))
+      passes = TidyPasses.for(root)
+      assert_equal [tip], passes.branch_tips(base)
+      assert passes.pass_since?(tip)
+      assert_equal({ "event" => "record", "repo" => root, "base" => base, "tip" => tip }, events.first.slice("event", "repo", "base", "tip"))
+    end
+  end
+
+  def test_an_unknown_or_too_short_sha_records_nothing
+    with_repo do |root|
+      head = git!(root, "rev-parse", "HEAD")
+      stop(transcript(tidy_prompt("#{root} git diff deadbeefcafe")))
+      stop(transcript(tidy_prompt("#{root} git diff #{head[0, 6]}")))
+      assert_empty passes_in(root)
+      assert_equal ["unknown commit", "not a git diff"], events.map { |event| event["reason"] }
+    end
+  end
+
   def test_revision_suffixes_are_not_punctuation
     with_repo do |root|
       base = git!(root, "rev-parse", "HEAD")

@@ -108,8 +108,9 @@ main session and inside subagents alike.
   and pushes to `main` or `master` are not gated.
 - `hooks/record-tidy-pass.rb` (SubagentStop) records a pass when a fork of
   the tidy skill finishes with its Removals and Out of scope sections,
-  taking the shas from the arguments the fork received. The agent never
-  writes a pass itself.
+  taking the shas from the arguments the fork received and expanding
+  shortened ones (seven characters or more) in that repository. The agent
+  never writes a pass itself.
 
 Passes live in `~/.local/state/dotagents/tidy/<worktree key>/`
 (`$XDG_STATE_HOME` when set), one folder per worktree, managed by

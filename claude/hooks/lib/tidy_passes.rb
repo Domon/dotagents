@@ -70,6 +70,11 @@ class TidyPasses
     File.join(self.class.state_dir, Digest::SHA256.hexdigest(toplevel)[0, 16])
   end
 
+  def commit_sha(revision)
+    out, _err, status = Open3.capture3("git", "-C", toplevel, "rev-parse", "--verify", "--quiet", "#{revision}^{commit}")
+    status.success? ? out.chomp : nil
+  end
+
   def record(base, tip = nil, details = {})
     FileUtils.mkdir_p(dir)
     File.write(File.join(dir, [base, tip].compact.join("-")), "#{JSON.generate(details)}\n")

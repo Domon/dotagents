@@ -10,7 +10,7 @@ module RecordTidyPass
   REVIEW_LINE = /^Review: (.+)$/
   TRAILING = %r{[\s`'"—–\-,;:)]*}
   # At most one full stop: `..`, `...`, ^ and ~ after a sha name a different revision range.
-  GIT_DIFF = /\A`*(?<path>.+?) git diff (?<base>\h{40})(?: (?<tip>\h{40}))?#{TRAILING}\.?#{TRAILING}\z/
+  GIT_DIFF = /\A`*(?<path>.+?) git diff (?<base>\h{7,40})(?: (?<tip>\h{7,40}))?#{TRAILING}\.?#{TRAILING}\z/
   SECTIONS = [/^\W*Removals\b/i, /^\W*Out of scope\b/i].freeze
 
   module_function
@@ -29,8 +29,12 @@ module RecordTidyPass
     passes = TidyPasses.for(path)
     return log_skip("not the top level", args, ids) unless passes && passes.toplevel == File.realpath(path)
 
-    passes.record(match[:base], match[:tip], { "args" => args, "recorded_at" => Time.now.utc.iso8601 }.merge(ids))
-    TidyPasses.log_event("record", { "repo" => passes.toplevel, "base" => match[:base], "tip" => match[:tip] }.merge(ids))
+    shas = match.values_at(:base, :tip).compact.map { |sha| passes.commit_sha(sha) }
+    return log_skip("unknown commit", args, ids) if shas.include?(nil)
+
+    base, tip = shas
+    passes.record(base, tip, { "args" => args, "recorded_at" => Time.now.utc.iso8601 }.merge(ids))
+    TidyPasses.log_event("record", { "repo" => passes.toplevel, "base" => base, "tip" => tip }.merge(ids))
   end
 
   def log_skip(reason, args, ids)
