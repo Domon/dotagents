@@ -1,0 +1,24 @@
+{
+  "skill_name": "humane-write",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "evals/files/declining-a-retry.md",
+      "expected_output": "The skill triggers without a slash command. The reply is a single position, stated in its first sentence: a retry at this line changes nothing because the failure is deterministic and transient failures are already retried by the queue. Evidence follows, with the production figures rounded or dated. The reply ends on its last piece of evidence, with no offer to file a ticket and no note on what would change the author's mind. Under about 250 words.",
+      "files": [
+        "evals/files/declining-a-retry.md"
+      ],
+      "expectations": [
+        "The humane-write skill was loaded without the user typing /humane-write",
+        "The first sentence states the position; it is not a concession, a restatement of the bot's finding, thanks, or an announcement of what the reply will do",
+        "The reply argues one line; no paragraph exists only to grant the bot's point before taking it back",
+        "Every comparative or superlative about system behaviour (slowest, busiest, rarely, expensive) carries a figure from the scenario; a bare one is a failure",
+        "Where a figure appears it is rounded or dated rather than copied to the unit",
+        "Any sentence about why the failure does not matter states a property of the system, not an attitude such as 'we don't mind' or 'not a big deal'",
+        "Each caveat sits under the claim it qualifies rather than welded into the claim's own sentence",
+        "The last sentence is evidence; there is no offer to raise a ticket, no 'happy to', no 'what would change my mind', no summary of the reply",
+        "The reply is under about 250 words; past that length the extra words have always been hedging or both-sides padding rather than evidence"
+      ]
+    }
+  ]
+}
